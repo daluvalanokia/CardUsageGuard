@@ -73,6 +73,8 @@ public class OtpService
 
     /// <summary>
     /// Verifies the OTP code against a card. Checks expiry and single-use.
+    /// Does NOT consume the OTP — it remains valid until the status change
+    /// is applied in CardStatusService.UpdateStatusAsync.
     /// Returns masked card details on success.
     /// </summary>
     public async Task<(bool verified, object? cardDetails, string? error)> VerifyOtpAsync(int cardId, string code, string userId)
@@ -91,21 +93,22 @@ public class OtpService
 
         if (otp == null)
         {
-            failReason = "No active OTP found — please request a new code";
+            failReason = "No active code found — please request a new code";
         }
         else if (otp.Code != code)
         {
-            failReason = "Invalid OTP code";
+            failReason = "That code didn't match — please check and try again";
         }
         else if (otp.ExpiresAt < DateTime.UtcNow)
         {
-            failReason = "OTP code has expired";
+            failReason = "Code has expired — please request a new one";
         }
         else
         {
+            // Valid — but do NOT mark as used here.
+            // The OTP is consumed when the status change is applied
+            // in CardStatusService.UpdateStatusAsync.
             verified = true;
-            otp.Used = true;
-            await _db.SaveChangesAsync();
         }
 
         // Audit log

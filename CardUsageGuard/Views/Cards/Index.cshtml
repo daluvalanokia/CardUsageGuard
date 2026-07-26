@@ -87,10 +87,7 @@ else
             };
             var phoneLast4 = card.PhoneNumber.Length >= 4 ? card.PhoneNumber[^4..] : "****";
 
-            <!-- Collapsible Card Panel -->
             <div class="card-panel" id="panel-@card.Id" data-card-id="@card.Id">
-
-                <!-- Always-visible header -->
                 <div class="card-panel-header" onclick="togglePanel(@card.Id)">
                     <div class="d-flex align-items-center gap-3">
                         <i class="bi bi-credit-card-2-front-fill @providerColorClass" style="font-size: 24px;"></i>
@@ -112,7 +109,6 @@ else
                     </div>
                 </div>
 
-                <!-- Collapsible body — authorization flow for this card -->
                 <div class="card-panel-body">
                     <div class="auth-flow" id="auth-flow-@card.Id">
 
@@ -168,7 +164,6 @@ else
                                 <span class="step-badge active">3</span>
                                 <h6 class="m-0 text-white">Enable or Disable Card</h6>
                             </div>
-                            <!-- Card details -->
                             <div class="p-3 mb-3 rounded" style="background:var(--bg-primary); border:1px solid var(--border-color); font-size:13px;">
                                 <div class="row g-2">
                                     <div class="col-5 text-muted">Card Name:</div>
@@ -186,7 +181,6 @@ else
                                     </div>
                                 </div>
                             </div>
-                            <!-- Toggle -->
                             <div class="mb-3">
                                 <label class="form-label text-secondary small d-block mb-2">Choose new status:</label>
                                 <div class="btn-group w-100">
@@ -236,13 +230,24 @@ else
     const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
     const otpStore = {}; // cardId -> code
 
+    // Helper: safely parse a fetch response — handles both JSON and error pages
+    async function parseResponse(response) {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch {
+            // Server returned non-JSON (error page, 400, 500, etc.)
+            if (!response.ok) {
+                return { _error: true, status: response.status, body: text.substring(0, 500) };
+            }
+            return { _error: true, body: text.substring(0, 500) };
+        }
+    }
+
     function togglePanel(cardId) {
         const panel = document.getElementById('panel-' + cardId);
         const isExpanded = panel.classList.contains('expanded');
-
-        // Collapse all — only one open at a time
         document.querySelectorAll('.card-panel').forEach(p => p.classList.remove('expanded'));
-
         if (!isExpanded) {
             panel.classList.add('expanded');
             showStep(cardId, 'request');
@@ -280,12 +285,15 @@ else
             },
             body: JSON.stringify({ cardId: cardId })
         })
-        .then(r => r.json())
+        .then(r => parseResponse(r))
         .then(data => {
             btn.disabled = false;
             btn.innerHTML = orig;
 
-            if (data.success) {
+            if (data._error) {
+                alertEl.textContent = 'Server error (HTTP ' + (data.status || '?') + '). Please try again.';
+                alertEl.style.display = 'block';
+            } else if (data.success) {
                 otpStore[cardId] = data.code;
                 if (data.code) {
                     devCodeVal.textContent = data.code;
@@ -300,8 +308,9 @@ else
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = orig;
-            alertEl.textContent = 'Network error. Please check your connection and try again.';
+            alertEl.textContent = 'Could not reach the server. Please check your connection and try again.';
             alertEl.style.display = 'block';
+            console.error('RequestOtp error:', err);
         });
     }
 
@@ -332,12 +341,15 @@ else
             },
             body: JSON.stringify({ cardId: cardId, code: code })
         })
-        .then(r => r.json())
+        .then(r => parseResponse(r))
         .then(data => {
             btn.disabled = false;
             btn.innerHTML = orig;
 
-            if (data.verified) {
+            if (data._error) {
+                alertEl.textContent = 'Server error (HTTP ' + (data.status || '?') + '). Please try again.';
+                alertEl.style.display = 'block';
+            } else if (data.verified) {
                 otpStore[cardId] = code;
                 showStep(cardId, 'details');
             } else {
@@ -348,8 +360,9 @@ else
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = orig;
-            alertEl.textContent = 'Network error. Please try again.';
+            alertEl.textContent = 'Could not reach the server. Please try again.';
             alertEl.style.display = 'block';
+            console.error('VerifyOtp error:', err);
         });
     }
 
@@ -381,12 +394,15 @@ else
             },
             body: JSON.stringify({ cardId: cardId, newStatus: newStatus, otpCode: otpCode })
         })
-        .then(r => r.json())
+        .then(r => parseResponse(r))
         .then(data => {
             btn.disabled = false;
             btn.innerHTML = orig;
 
-            if (data.success) {
+            if (data._error) {
+                alertEl.textContent = 'Server error (HTTP ' + (data.status || '?') + '). Please try again.';
+                alertEl.style.display = 'block';
+            } else if (data.success) {
                 document.getElementById('r-provider-' + cardId).textContent = data.provider || '—';
                 document.getElementById('r-old-' + cardId).textContent = data.oldStatus || '—';
                 const newEl = document.getElementById('r-new-' + cardId);
@@ -401,8 +417,9 @@ else
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = orig;
-            alertEl.textContent = 'Network error. Please try again.';
+            alertEl.textContent = 'Could not reach the server. Please try again.';
             alertEl.style.display = 'block';
+            console.error('UpdateStatus error:', err);
         });
     }
 </script>

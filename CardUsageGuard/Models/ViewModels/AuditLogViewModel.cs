@@ -12,6 +12,8 @@ public class AuditLogViewModel
     public string? HttpMethod { get; set; }
     public string? HttpUrl { get; set; }
     public int? HttpStatusCode { get; set; }
+    public string? RequestPayload { get; set; }
+    public string? ResponsePayload { get; set; }
     public bool Success { get; set; }
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }

@@ -43,6 +43,8 @@ public class AuditLogController : Controller
                 HttpMethod = a.HttpMethod,
                 HttpUrl = a.HttpUrl,
                 HttpStatusCode = a.HttpStatusCode,
+                RequestPayload = a.RequestPayload,
+                ResponsePayload = a.ResponsePayload,
                 Success = a.Success,
                 ErrorCode = a.ErrorCode,
                 ErrorMessage = a.ErrorMessage,
@@ -51,6 +53,7 @@ public class AuditLogController : Controller
             })
             .ToListAsync();
 
+        ViewBag.IsAdmin = isAdmin;
         return View(logs);
     }
 }
