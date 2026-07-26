@@ -15,17 +15,19 @@ public class ConfigurationController : Controller
     private readonly AppDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
+    private readonly ILogger<ConfigurationController> _logger;
 
-    public ConfigurationController(AppDbContext db, UserManager<ApplicationUser> userManager, IConfiguration config)
+    public ConfigurationController(AppDbContext db, UserManager<ApplicationUser> userManager, IConfiguration config, ILogger<ConfigurationController> logger)
     {
         _db = db;
         _userManager = userManager;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
     {
-        // Ensure settings are seeded
+        // Ensure the AppSettings table exists, then seed defaults
         await EnsureSettingsSeededAsync();
 
         var settings = await _db.AppSettings
@@ -95,9 +97,7 @@ public class ConfigurationController : Controller
             client.DefaultRequestHeaders.Add("x-api-key", apiKey);
             client.Timeout = TimeSpan.FromSeconds(10);
 
-            // Lithic API status endpoint
             var response = await client.GetAsync($"{baseUrl}/cards?limit=1");
-            var responseBody = await response.Content.ReadAsStringAsync();
 
             return Json(new
             {
@@ -120,11 +120,57 @@ public class ConfigurationController : Controller
         }
     }
 
+    /// <summary>
+    /// Ensures the AppSettings table exists in the database.
+    /// If the table doesn't exist (e.g., migration hasn't been run),
+    /// creates it via raw SQL, then seeds default settings.
+    /// </summary>
     private async Task EnsureSettingsSeededAsync()
     {
+        try
+        {
+            // Check if table exists and has data
+            if (await _db.AppSettings.AnyAsync()) return;
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 207 || ex.Message.Contains("Invalid object name"))
+        {
+            // Table doesn't exist — create it via raw SQL
+            _logger.LogWarning("AppSettings table not found. Creating it via raw SQL...");
+
+            await _db.Database.ExecuteSqlRawAsync(@"
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AppSettings')
+                BEGIN
+                    CREATE TABLE [AppSettings] (
+                        [Id] INT IDENTITY(1,1) PRIMARY KEY,
+                        [Key] NVARCHAR(100) NOT NULL,
+                        [Value] NVARCHAR(2000) NULL,
+                        [Category] NVARCHAR(50) NOT NULL,
+                        [Description] NVARCHAR(500) NULL,
+                        [IsSecret] BIT NOT NULL DEFAULT 0,
+                        [CreatedDate] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                        [UpdatedDate] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                        CONSTRAINT [UQ_AppSettings_Key] UNIQUE ([Key])
+                    );
+                    CREATE INDEX [IX_AppSettings_Category] ON [AppSettings] ([Category]);
+                END
+            ");
+
+            _logger.LogInformation("AppSettings table created successfully.");
+        }
+
+        // Now seed defaults if empty
         if (await _db.AppSettings.AnyAsync()) return;
 
-        var defaults = new List<AppSetting>
+        var defaults = GetDefaultSettings();
+        _db.AppSettings.AddRange(defaults);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Seeded {Count} default app settings.", defaults.Count);
+    }
+
+    private List<AppSetting> GetDefaultSettings()
+    {
+        return new List<AppSetting>
         {
             new()
             {
@@ -199,9 +245,6 @@ public class ConfigurationController : Controller
                 IsSecret = true
             }
         };
-
-        _db.AppSettings.AddRange(defaults);
-        await _db.SaveChangesAsync();
     }
 }
 
