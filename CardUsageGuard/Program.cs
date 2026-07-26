@@ -69,7 +69,7 @@ using (var scope = app.Services.CreateScope())
 
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        await SeedData.InitializeAsync(roleManager, userManager);
+        await SeedData.InitializeAsync(roleManager, userManager, db);
     }
     catch (Exception ex)
     {
