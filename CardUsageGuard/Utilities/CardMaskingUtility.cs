@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace CardUsageGuard.Utilities;
 
 public static class CardMaskingUtility
@@ -45,11 +47,9 @@ public static class CardMaskingUtility
         var sensitiveKeys = new[] { "cardNumber", "otpCode", "code", "password", "secret", "token", "otp" };
         foreach (var key in sensitiveKeys)
         {
-            json = System.Text.RegularExpressions.Regex.Replace(
-                json,
-                $""{key}"\s*:\s*"[^"]*"",
-                $""{key}":"***MASKED***"",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var pattern = "\"" + key + "\"\\s*:\\s*\"[^\"]*\"";
+            var replacement = "\"" + key + "\":\"***MASKED***\"";
+            json = Regex.Replace(json, pattern, replacement, RegexOptions.IgnoreCase);
         }
 
         return json;
