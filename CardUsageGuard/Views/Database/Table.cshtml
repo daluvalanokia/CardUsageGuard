@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = "Database";
+}
+<!-- This view renders the same content as Index.cshtml since the controller
+     always returns View("Index") with the table data. But the controller
+     uses View("Table", data) — we need to map that. Actually, let me use
+     a shared layout. The controller returns View("Table", data) but we
+     only have Index.cshtml. Let me fix the controller to return View("Index", data). -->
+@*
+    The DatabaseController.ViewTable returns View("Table", data).
+    This is a placeholder — the actual rendering is handled by Index.cshtml
+    which checks ViewBag.CurrentTable and renders the data from Model.
+*@
+@model dynamic
+@{
+    var tables = ViewBag.Tables as string[] ?? Array.Empty<string>();
+    var currentTable = ViewBag.CurrentTable as string;
+}
+
+<style>
+    .db-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .db-tab {
+        padding: 10px 20px; border-radius: var(--radius-sm); text-decoration: none;
+        font-weight: 600; font-size: 14px; border: 1px solid var(--border-color);
+        background: var(--bg-secondary); color: var(--text-secondary); transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .db-tab:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .db-tab.active { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border-color: var(--accent-blue); }
+    .db-read-only-badge {
+        display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+        background: rgba(245, 158, 11, 0.15); color: var(--accent-orange);
+        border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .db-table { background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border-color); overflow-x: auto; }
+    .db-table table { width: 100%; color: var(--text-primary); margin: 0; }
+    .db-table thead th {
+        padding: 12px 16px; font-weight: 600; font-size: 13px; color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color); white-space: nowrap;
+    }
+    .db-table td { padding: 10px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; vertical-align: top; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+    .db-table td.expandable { max-width: 300px; cursor: pointer; }
+    .db-table td.expandable .full-text { display: none; word-break: break-all; white-space: pre-wrap; }
+    .db-table td.expandable.expanded .truncated { display: none; }
+    .db-table td.expandable.expanded .full-text { display: block; }
+    .db-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+    .pagination-info { color: var(--text-muted); font-size: 13px; }
+    .pagination-controls { display: flex; gap: 4px; }
+    .page-link {
+        padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px;
+        color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.15s;
+    }
+    .page-link:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .page-link.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .page-link.disabled { opacity: 0.4; pointer-events: none; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>Database</h1>
+        <p class="text-muted">Read-only view of all database tables</p>
+    </div>
+    <span class="db-read-only-badge"><i class="bi bi-lock"></i> Read Only</span>
+</div>
+
+<div class="db-nav">
+    @foreach (var t in tables)
+    {
+        <a asp-action="ViewTable" asp-route-table="@t" class="db-tab @(currentTable?.Equals(t, StringComparison.OrdinalIgnoreCase) == true ? "active" : "")">
+            <i class="bi bi-table"></i> @t
+        </a>
+    }
+</div>
+
+@if (Model != null)
+{
+    var data = Model as System.Collections.IEnumerable;
+    var rowCount = 0;
+    if (data != null) rowCount = data.Cast<object>().Count();
+    var totalCount = ViewBag.TotalCount as int? ?? 0;
+    var page = ViewBag.Page as int? ?? 1;
+    var pageSize = ViewBag.PageSize as int? ?? 25;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
+    var userRoles = ViewBag.UserRoles as Dictionary<string, string>;
+
+    <div class="pagination-bar" style="justify-content: flex-start; gap: 16px;">
+        <span class="pagination-info">
+            <strong>@currentTable</strong> — @totalCount total records, showing @(rowCount) on page @page of @totalPages
+        </span>
+    </div>
+
+    if (rowCount > 0)
+    {
+        <div class="db-table mt-3">
+            <table>
+                <thead>
+                    <tr>
+                        @foreach (var prop in data!.Cast<object>().First().GetType().GetProperties())
+                        {
+                            <th>@prop.Name</th>
+                        }
+                        @if (currentTable == "Users" && userRoles != null)
+                        {
+                            <th>Roles</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in data!)
+                    {
+                        <tr>
+                            @foreach (var prop in row.GetType().GetProperties())
+                            {
+                                var val = prop.GetValue(row);
+                                var strVal = val switch
+                                {
+                                    null => "—",
+                                    true => "✓",
+                                    false => "✗",
+                                    DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+                                    _ => val.ToString() ?? "—"
+                                };
+                                var isLong = strVal.Length > 80;
+                                <td class="@(isLong ? "expandable" : "")">
+                                    @if (isLong)
+                                    {
+                                        <span class="truncated">@strVal</span>
+                                        <span class="full-text">@strVal</span>
+                                    }
+                                    else
+                                    {
+                                        @strVal
+                                    }
+                                </td>
+                            }
+                            @if (currentTable == "Users" && userRoles != null)
+                            {
+                                var idProp = row.GetType().GetProperty("Id");
+                                var id = idProp?.GetValue(row)?.ToString();
+                                <td><span class="badge badge-action">@(userRoles.GetValueOrDefault(id ?? ""))</span></td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-bar mt-3">
+            <span class="pagination-info">Page @page of @totalPages</span>
+            <div class="pagination-controls">
+                @if (page > 1)
+                {
+                    <a asp-action="ViewTable" asp-route-table="@currentTable" asp-route-page="@(page - 1)" asp-route-pageSize="@pageSize" class="page-link">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link disabled"><i class="bi bi-chevron-left"></i></span>
+                }
+
+                @for (int p = Math.Max(1, page - 2); p <= Math.Min(totalPages, page + 2); p++)
+                {
+                    <a asp-action="ViewTable" asp-route-table="@currentTable" asp-route-page="@p" asp-route-pageSize="@pageSize" class="page-link @(p == page ? "active" : "")">@p</a>
+                }
+
+                @if (page < totalPages)
+                {
+                    <a asp-action="ViewTable" asp-route-table="@currentTable" asp-route-page="@(page + 1)" asp-route-pageSize="@pageSize" class="page-link">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link disabled"><i class="bi bi-chevron-right"></i></span>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h3>No records</h3>
+            <p class="text-muted">This table is empty.</p>
+        </div>
+    }
+}
+else
+{
+    <div class="empty-state">
+        <i class="bi bi-database"></i>
+        <h3>Select a table above</h3>
+        <p class="text-muted">Choose a table to browse its records in read-only mode.</p>
+    </div>
+}
+
+@section Scripts {
+<script>
+    document.querySelectorAll('.db-table td.expandable').forEach(td => {
+        td.addEventListener('click', function() { this.classList.toggle('expanded'); });
+    });
+</script>
+}

@@ -35,6 +35,9 @@
                 </a>
                 @if (isAdmin)
                 {
+                    <a asp-controller="Database" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Database" ? "active" : "")">
+                        <i class="bi bi-database"></i> Database
+                    </a>
                     <div class="admin-badge"><i class="bi bi-star-fill"></i> Admin</div>
                 }
             </nav>
@@ -44,7 +47,9 @@
                     <span>@userName</span>
                 </div>
                 <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form">
-                    <button type="submit" class="btn-logout"><i class="bi bi-box-arrow-right"></i></button>
+                    <button type="submit" class="btn-signout" title="Sign out">
+                        <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+                    </button>
                 </form>
             </div>
         </aside>

@@ -93,6 +93,25 @@ body.dark-theme {
     padding: 6px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
 }
 .btn-logout:hover { color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
+.btn-signout {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #F87171;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-signout:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
 
 .main-content {
     flex: 1;
