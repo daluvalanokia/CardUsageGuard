@@ -111,18 +111,156 @@ body.dark-theme {
 .page-header h1 { font-size: 28px; font-weight: 700; }
 .page-header p { color: var(--text-secondary); margin-top: 4px; }
 
-/* Buttons */
+/* Buttons — full dark theme styling */
 .btn-icon {
     background: none; border: 1px solid var(--border-color);
-    color: var(--text-secondary); padding: 8px 12px;
+    color: var(--text-secondary); padding: 8px 14px;
     border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+    font-size: 14px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
 }
 .btn-icon:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
-.btn-primary { background: var(--accent-blue) !important; border: none !important; }
-.btn-primary:hover { background: #2563EB !important; }
-.btn-success { background: var(--accent-green) !important; border: none !important; }
-.btn-danger { background: var(--accent-red) !important; border: none !important; }
-.btn-outline-light { border: 1px solid var(--border-color) !important; color: var(--text-primary) !important; }
+
+/* Primary (solid blue) */
+.btn-primary {
+    background: var(--accent-blue) !important;
+    color: #FFFFFF !important;
+    border: 1px solid var(--accent-blue) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-primary:hover {
+    background: #2563EB !important;
+    border-color: #2563EB !important;
+}
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Outline Secondary (transparent, light border) */
+.btn-outline-secondary {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-outline-secondary:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--text-secondary) !important;
+}
+
+/* Outline Light */
+.btn-outline-light {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--text-primary) !important;
+}
+
+/* Success (solid green) */
+.btn-success {
+    background: var(--accent-green) !important;
+    color: #FFFFFF !important;
+    border: 1px solid var(--accent-green) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-success:hover {
+    background: #0EA86E !important;
+    border-color: #0EA86E !important;
+}
+
+/* Danger (solid red) */
+.btn-danger {
+    background: var(--accent-red) !important;
+    color: #FFFFFF !important;
+    border: 1px solid var(--accent-red) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-danger:hover {
+    background: #DC2626 !important;
+    border-color: #DC2626 !important;
+}
+
+/* Outline Success (green border) */
+.btn-outline-success {
+    background: transparent !important;
+    color: var(--accent-green) !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-outline-success:hover {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #34D399 !important;
+    border-color: var(--accent-green) !important;
+}
+.btn-outline-success.active, .btn-check:checked + .btn-outline-success {
+    background: var(--accent-green) !important;
+    color: #FFFFFF !important;
+    border-color: var(--accent-green) !important;
+}
+
+/* Outline Danger (red border) */
+.btn-outline-danger {
+    background: transparent !important;
+    color: var(--accent-red) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-outline-danger:hover {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #F87171 !important;
+    border-color: var(--accent-red) !important;
+}
+.btn-outline-danger.active, .btn-check:checked + .btn-outline-danger {
+    background: var(--accent-red) !important;
+    color: #FFFFFF !important;
+    border-color: var(--accent-red) !important;
+}
+
+/* Spinner inside buttons */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
 
 /* Empty State */
 .empty-state {
