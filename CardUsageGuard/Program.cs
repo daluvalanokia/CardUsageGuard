@@ -7,9 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// Database — with retry on transient failures
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 
 // Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -52,19 +57,24 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Seed roles and admin user — wrapped in try-catch so the server starts
-// even if the database hasn't been created yet (run migrations first!)
+// Ensure database exists and seed — safe to run on every startup
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
+        // Create the database + tables if they don't exist yet.
+        // This is a quick-start shortcut — use 'dotnet ef migrations' for proper schema management.
+        await db.Database.EnsureCreatedAsync();
+
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         await SeedData.InitializeAsync(roleManager, userManager);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[WARNING] Database seeding skipped — run 'dotnet ef database update' first.");
+        Console.WriteLine("[WARNING] Database setup skipped.");
+        Console.WriteLine($"[WARNING] Run migrations: dotnet ef migrations add InitialCreate && dotnet ef database update");
         Console.WriteLine($"[WARNING] Error: {ex.Message}");
     }
 }
