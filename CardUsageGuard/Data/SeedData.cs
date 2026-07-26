@@ -1,3 +1,4 @@
+using CardUsageGuard.Models;
 using CardUsageGuard.Models.Entities;
 using CardUsageGuard.Models.Enums;
 using Microsoft.AspNetCore.Identity;
