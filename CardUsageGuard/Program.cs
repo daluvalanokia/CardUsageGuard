@@ -52,15 +52,28 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Seed roles and admin user
+// Seed roles and admin user — wrapped in try-catch so the server starts
+// even if the database hasn't been created yet (run migrations first!)
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    await SeedData.InitializeAsync(roleManager, userManager);
+    try
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        await SeedData.InitializeAsync(roleManager, userManager);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[WARNING] Database seeding skipped — run 'dotnet ef database update' first.");
+        Console.WriteLine($"[WARNING] Error: {ex.Message}");
+    }
 }
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();

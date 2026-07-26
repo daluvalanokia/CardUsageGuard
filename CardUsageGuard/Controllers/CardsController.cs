@@ -252,11 +252,11 @@ public class CardsController : Controller
         return Json(response);
     }
 
-    private async Task<bool> CanAccessCard(Card card)
+    private Task<bool> CanAccessCard(Card card)
     {
-        if (User.IsInRole("admin")) return true;
+        if (User.IsInRole("admin")) return Task.FromResult(true);
         var userId = _userManager.GetUserId(User)!;
-        return card.ApplicationUserId == userId;
+        return Task.FromResult(card.ApplicationUserId == userId);
     }
 
     private static CardViewModel MapToViewModel(Card card)
