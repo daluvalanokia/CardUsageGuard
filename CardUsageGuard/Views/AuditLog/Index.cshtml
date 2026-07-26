@@ -18,45 +18,77 @@
         border-radius: 20px; padding: 4px 14px; font-size: 0.85rem; color: var(--text-muted);
     }
     .audit-row td { vertical-align: top; }
-    .payload-cell {
-        max-width: 300px;
-        font-family: "SF Mono", Monaco, Consolas, monospace;
-        font-size: 11px;
-        line-height: 1.4;
-        color: var(--text-muted);
-    }
+
+    /* Payload expand/collapse */
+    .payload-cell { max-width: 250px; }
     .payload-toggle {
         cursor: pointer;
         color: var(--accent-blue);
         font-size: 12px;
+        font-weight: 600;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.15s;
     }
-    .payload-toggle:hover { text-decoration: underline; }
-    .payload-preview {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 280px;
+    .payload-toggle:hover {
+        background: rgba(59, 130, 246, 0.12);
+        text-decoration: underline;
     }
     .payload-full {
         display: none;
         word-break: break-all;
         white-space: pre-wrap;
-        background: var(--bg-primary);
-        padding: 8px 10px;
-        border-radius: 4px;
-        border: 1px solid var(--border-color);
-        max-height: 200px;
+        font-family: "SF Mono", Monaco, Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        max-height: 300px;
         overflow-y: auto;
     }
-    .payload-expanded .payload-preview { display: none; }
     .payload-expanded .payload-full { display: block; }
+    .payload-expanded .payload-preview { display: none; }
+    .payload-preview {
+        font-family: "SF Mono", Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 230px;
+        padding: 2px 0;
+    }
+    .payload-block {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+    }
+    .payload-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        display: block;
+    }
+    .payload-label.req { color: #60A5FA; }
+    .payload-label.res { color: #34D399; }
+    .payload-label.url { color: var(--text-muted); }
+    .payload-code {
+        color: var(--text-primary);
+        word-break: break-all;
+        white-space: pre-wrap;
+    }
 </style>
 
 <div class="page-header">
     <div>
         <h1>Audit Log</h1>
-        <p class="text-muted">Full audit trail of all sensitive operations @(isAdmin ? "— including request/response payloads" : "")</p>
+        <p class="text-muted">Full audit trail of all sensitive operations @(isAdmin ? "— including API request/response payloads" : "")</p>
     </div>
     <div class="d-flex align-items-center gap-2">
         <span class="audit-count-badge">@Model.Count entries</span>
@@ -73,7 +105,7 @@
             <label for="logSearch" class="form-label">Search Logs</label>
             <div class="input-group">
                 <span class="input-group-text bg-card border-color text-muted"><i class="bi bi-search"></i></span>
-                <input type="text" id="logSearch" onkeyup="filterLogs()" class="form-control" placeholder="Search by Card ID, action, error..." />
+                <input type="text" id="logSearch" onkeyup="filterLogs()" class="form-control" placeholder="Search by Card ID, action, error, URL..." />
             </div>
         </div>
         <div class="col-md-2">
@@ -152,7 +184,7 @@ else
                     </th>
                     @if (isAdmin)
                     {
-                        <th>Request / Response</th>
+                        <th>API Request / Response</th>
                     }
                 </tr>
             </thead>
@@ -171,11 +203,15 @@ else
                         <td>
                             @if (!string.IsNullOrEmpty(log.HttpMethod))
                             {
-                                <span>@log.HttpMethod @(log.HttpStatusCode?.ToString() ?? "")</span>
+                                <span class="font-mono small">@log.HttpMethod</span>
+                                @if (log.HttpStatusCode.HasValue)
+                                {
+                                    <br /><span class="small @(log.HttpStatusCode >= 200 && log.HttpStatusCode < 300 ? "text-success" : "text-danger")">@log.HttpStatusCode</span>
+                                }
                             }
                             else
                             {
-                                <span>—</span>
+                                <span class="text-muted">—</span>
                             }
                         </td>
                         <td data-sort="@log.Success.ToString().ToLower()">
@@ -192,40 +228,56 @@ else
                         <td>
                             @if (!string.IsNullOrEmpty(log.ErrorMessage))
                             {
-                                <span class="text-danger" title="@log.ErrorMessage">@log.ErrorCode</span>
+                                <span class="text-danger small" title="@log.ErrorMessage">@log.ErrorCode</span>
                             }
                             else
                             {
                                 <span class="text-muted">—</span>
                             }
                         </td>
-                        <td data-sort="@log.DurationMs">@log.DurationMs ms</td>
+                        <td data-sort="@log.DurationMs">@(log.DurationMs)ms</td>
                         @if (isAdmin)
                         {
                             <td class="payload-cell">
                                 @if (!string.IsNullOrEmpty(log.RequestPayload) || !string.IsNullOrEmpty(log.ResponsePayload))
                                 {
-                                    <div class="payload-preview">
-                                        @(log.RequestPayload ?? "—")
-                                    </div>
+                                    <!-- Collapsed preview -->
+                                    <div class="payload-preview">@(log.RequestPayload ?? "—")</div>
+                                    
+                                    <!-- Expanded view -->
                                     <div class="payload-full">
+                                        @if (!string.IsNullOrEmpty(log.HttpUrl))
+                                        {
+                                            <div class="payload-block">
+                                                <span class="payload-label url">Endpoint URL</span>
+                                                <code class="payload-code text-info">@log.HttpUrl</code>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(log.HttpMethod))
+                                        {
+                                            <div class="payload-block">
+                                                <span class="payload-label url">HTTP Method & Status</span>
+                                                <code class="payload-code">@log.HttpMethod → @(log.HttpStatusCode?.ToString() ?? "N/A")</code>
+                                            </div>
+                                        }
                                         @if (!string.IsNullOrEmpty(log.RequestPayload))
                                         {
-                                            <div class="mb-2">
-                                                <span class="text-info fw-bold">Request:</span><br />
-                                                <code>@log.RequestPayload</code>
+                                            <div class="payload-block">
+                                                <span class="payload-label req"><i class="bi bi-arrow-up-circle"></i> Request Sent</span>
+                                                <code class="payload-code">@log.RequestPayload</code>
                                             </div>
                                         }
                                         @if (!string.IsNullOrEmpty(log.ResponsePayload))
                                         {
-                                            <div>
-                                                <span class="text-success fw-bold">Response:</span><br />
-                                                <code>@log.ResponsePayload</code>
+                                            <div class="payload-block">
+                                                <span class="payload-label res"><i class="bi bi-arrow-down-circle"></i> Response Received</span>
+                                                <code class="payload-code">@log.ResponsePayload</code>
                                             </div>
                                         }
                                     </div>
+                                    
                                     <span class="payload-toggle" onclick="togglePayload(this)">
-                                        <i class="bi bi-zoom-in"></i> Show details
+                                        <i class="bi bi-zoom-in"></i> Show API details
                                     </span>
                                 }
                                 else
@@ -247,9 +299,9 @@ else
         const cell = el.closest('.payload-cell');
         cell.classList.toggle('payload-expanded');
         if (cell.classList.contains('payload-expanded')) {
-            el.innerHTML = '<i class="bi bi-zoom-out"></i> Hide details';
+            el.innerHTML = '<i class="bi bi-zoom-out"></i> Hide API details';
         } else {
-            el.innerHTML = '<i class="bi bi-zoom-in"></i> Show details';
+            el.innerHTML = '<i class="bi bi-zoom-in"></i> Show API details';
         }
     }
 
