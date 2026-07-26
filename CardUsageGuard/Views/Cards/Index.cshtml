@@ -1,11 +1,50 @@
 @model List<CardViewModel>
 @{
     ViewData["Title"] = "Secured Card Manage";
-    var sortKey = ViewBag.SortKey as string ?? "CardName";
-    var sortDir = ViewBag.SortDir as string ?? "asc";
-    string ToggleDir(string key) => key == sortKey && sortDir == "asc" ? "desc" : "asc";
-    string SortIcon(string key) => key == sortKey ? (sortDir == "asc" ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up";
 }
+
+<style>
+    .card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .card-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .card-item:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-color: var(--accent-blue) !important;
+    }
+    .card-item.selected {
+        background: rgba(59, 130, 246, 0.12) !important;
+        border-color: var(--accent-blue) !important;
+        box-shadow: 0 0 0 1px var(--accent-blue);
+    }
+    .auth-card-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 24px;
+        min-height: 400px;
+    }
+    .step-container {
+        padding: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+    }
+    .font-mono {
+        font-family: "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+    }
+    .flex-1 {
+        flex: 1;
+    }
+</style>
 
 <div class="page-header">
     <div>
@@ -17,211 +56,490 @@
     </button>
 </div>
 
+@Html.AntiForgeryToken()
+
 @if (!Model.Any())
 {
     <div class="empty-state">
-        <i class="bi bi-credit-card"></i>
-        <h3>No cards found</h3>
-        <p>Add a new card to get started.</p>
+        <i class="bi bi-credit-card-2-front" style="font-size: 48px; color: var(--text-muted);"></i>
+        <h3 class="mt-3">No cards found</h3>
+        <p class="text-muted">You do not have any cards configured in your system.</p>
+        <p>Please go to <a asp-controller="Home" asp-action="Settings" class="text-info text-decoration-none fw-bold">Settings</a> to manage cards.</p>
     </div>
 }
 else
 {
-    <!-- Card Table -->
-    <div class="card-table-container">
-        <table class="table card-table">
-            <thead>
-                <tr>
-                    <th>
-                        <a asp-action="Index" asp-route-sortKey="CardName" asp-route-sortDir="@ToggleDir("CardName")" class="sort-link">
-                            Card Name <i class="bi @SortIcon("CardName")"></i>
-                        </a>
-                    </th>
-                    <th>Provider</th>
-                    <th>
-                        <a asp-action="Index" asp-route-sortKey="CardType" asp-route-sortDir="@ToggleDir("CardType")" class="sort-link">
-                            Type <i class="bi @SortIcon("CardType")"></i>
-                        </a>
-                    </th>
-                    <th>Number</th>
-                    <th>
-                        <a asp-action="Index" asp-route-sortKey="ExpirationDate" asp-route-sortDir="@ToggleDir("ExpirationDate")" class="sort-link">
-                            Expires <i class="bi @SortIcon("ExpirationDate")"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a asp-action="Index" asp-route-sortKey="Status" asp-route-sortDir="@ToggleDir("Status")" class="sort-link">
-                            Status <i class="bi @SortIcon("Status")"></i>
-                        </a>
-                    </th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+    <div class="row g-4">
+        <!-- LEFT column: 'Your Cards' heading, then clickable card items -->
+        <div class="col-md-6">
+            <h4 class="mb-3 text-white"><i class="bi bi-credit-card-fill text-muted me-2"></i>Your Cards</h4>
+            <div class="card-list">
                 @foreach (var card in Model)
                 {
-                    <tr id="card-row-@card.Id" class="@(card.Status == CardStatus.Disabled ? "row-disabled" : "")">
-                        <td><strong>@card.CardName</strong></td>
-                        <td><span class="badge badge-@card.CardProvider.ToString().ToLower()">@card.CardProvider</span></td>
-                        <td>@card.CardType</td>
-                        <td class="font-mono">@card.MaskedCardNumber</td>
-                        <td>@card.ExpirationDate.ToString("MM/yy")</td>
-                        <td>
-                            <span class="status-badge status-@card.Status.ToString().ToLower()">
-                                <i class="bi @(card.Status == CardStatus.Enabled ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
-                                @card.Status
-                            </span>
-                        </td>
-                        <td class="actions">
-                            <button class="btn-sm btn-status" onclick="openStatusPanel(@card.Id, '@card.CardName', '@card.Status')" title="Manage Status">
-                                <i class="bi bi-shield-lock"></i>
-                            </button>
-                            <button class="btn-sm btn-edit" onclick="editCard(@card.Id)" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn-sm btn-delete" onclick="deleteCard(@card.Id, '@card.CardName')" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
+                    var providerColorClass = card.CardProvider switch
+                    {
+                        CardProvider.Visa => "text-primary",
+                        CardProvider.Mastercard => "text-warning",
+                        CardProvider.Amex => "text-success",
+                        _ => "text-info"
+                    };
+
+                    <div class="card-item d-flex align-items-center justify-content-between p-3" 
+                         onclick="selectCard(@card.Id, '@card.CardName', '@card.CardProvider', '@card.CardType', '@card.MaskedCardNumber', '@card.ExpirationDate.ToString("MM/yy")', '@card.Status', '@card.PhoneNumber', '@card.Email', this)"
+                         id="card-item-@card.Id">
+                        
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="bi bi-credit-card-2-front-fill card-icon @providerColorClass" style="font-size: 28px;"></i>
+                            <div>
+                                <div class="card-name fw-bold text-white">@card.CardName</div>
+                                <div class="card-sub text-muted small">@card.CardProvider • @card.CardType</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            @if (card.Status == CardStatus.Enabled)
+                            {
+                                <span class="status-badge status-enabled text-success" style="background: rgba(16, 185, 129, 0.15); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600;">
+                                    <i class="bi bi-shield-check me-1"></i> Enabled
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-disabled text-danger" style="background: rgba(239, 68, 68, 0.15); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600;">
+                                    <i class="bi bi-shield-lock me-1"></i> Disabled
+                                </span>
+                            }
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
-    </div>
+            </div>
+        </div>
 
-    <button class="btn btn-primary mt-3" onclick="addCard()">
-        <i class="bi bi-plus-circle"></i> Add New Card
-    </button>
+        <!-- RIGHT column: 'Authorization' heading -->
+        <div class="col-md-6">
+            <h4 class="mb-3 text-white"><i class="bi bi-shield-lock-fill text-muted me-2"></i>Authorization</h4>
+            <div class="auth-card-panel d-flex flex-column justify-content-center">
+                
+                <!-- If no card selected -->
+                <div id="auth-placeholder" class="text-center py-5">
+                    <i class="bi bi-shield-lock text-muted" style="font-size: 56px;"></i>
+                    <p class="text-secondary mt-3 mb-0">Select a card from the list to begin the authorization flow</p>
+                </div>
+
+                <!-- If card selected: 3-step authorization panel -->
+                <div id="auth-panel" style="display: none;">
+                    
+                    <!-- Step 1 (Request) -->
+                    <div id="step-request" class="step-container">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary text-white">Step 1</span>
+                            <h5 class="m-0 text-white">Request Verification Code</h5>
+                        </div>
+                        <p class="text-secondary small">To authorize status modifications, we must verify your identity. An OTP will be sent to your registered phone number ending in:</p>
+                        
+                        <div class="p-3 mb-3 text-center rounded" style="background: var(--bg-primary); border: 1px solid var(--border-color);">
+                            <span class="fs-4 fw-bold text-white">•••• •••• <span id="phone-last-4">****</span></span>
+                        </div>
+
+                        <div class="alert alert-danger mb-3" id="request-alert" style="display: none;"></div>
+                        
+                        <button class="btn btn-primary w-100 py-2 fw-semibold" id="btn-request-otp">
+                            <i class="bi bi-chat-left-text me-2"></i>Request Code
+                        </button>
+                    </div>
+
+                    <!-- Step 2 (Verify) -->
+                    <div id="step-verify" class="step-container" style="display: none;">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary text-white">Step 2</span>
+                            <h5 class="m-0 text-white">Enter Verification Code</h5>
+                        </div>
+                        <p class="text-secondary small">Enter the 6-digit OTP code sent to your mobile device to complete authentication.</p>
+
+                        <div class="form-group mb-3 text-center">
+                            <input type="text" id="verification-code-input" class="form-control text-center font-mono fs-3" placeholder="000000" maxlength="6" style="letter-spacing: 0.3em; max-width: 240px; margin: 0 auto;" />
+                            <div class="text-danger small mt-2" id="verify-error-msg" style="display: none;">Please enter a valid 6-digit numerical code.</div>
+                        </div>
+
+                        <!-- Dev Code Display -->
+                        <div class="p-2 mb-3 rounded text-center" id="dev-code-display" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.3); display: none;">
+                            <span class="text-warning small"><i class="bi bi-bug me-1"></i>Dev Code: <strong id="dev-code-value" class="font-mono fs-6"></strong></span>
+                        </div>
+
+                        <div class="alert alert-danger mb-3" id="verify-alert" style="display: none;"></div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-light flex-1 py-2 fw-semibold" id="btn-verify-back">
+                                <i class="bi bi-chevron-left me-1"></i>Back
+                            </button>
+                            <button class="btn btn-primary flex-1 py-2 fw-semibold" id="btn-verify-submit">
+                                <i class="bi bi-shield-check me-1"></i>Verify Code
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 (Details) -->
+                    <div id="step-details" class="step-container" style="display: none;">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-success text-white">Step 3</span>
+                            <h5 class="m-0 text-white">View Details & Toggle Status</h5>
+                        </div>
+
+                        <!-- Card Details Grid -->
+                        <div class="p-3 mb-3 rounded" style="background: var(--bg-primary); border: 1px solid var(--border-color); font-size: 13px;">
+                            <div class="row g-2">
+                                <div class="col-5 text-muted">Card Name:</div>
+                                <div class="col-7 text-end text-white fw-semibold" id="detail-name"></div>
+
+                                <div class="col-5 text-muted">Provider:</div>
+                                <div class="col-7 text-end"><span id="detail-provider"></span></div>
+
+                                <div class="col-5 text-muted">Card Type:</div>
+                                <div class="col-7 text-end text-white" id="detail-type"></div>
+
+                                <div class="col-5 text-muted">Expiration:</div>
+                                <div class="col-7 text-end text-white font-mono" id="detail-expiration"></div>
+
+                                <div class="col-12 border-top border-secondary my-2 pt-2">
+                                    <div class="text-muted mb-1 text-center">Card Number</div>
+                                    <div class="text-center text-white font-mono fs-5" id="detail-number"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Toggle -->
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small d-block mb-2">New Card Status</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="cardStatusToggle" id="toggle-enabled" value="Enabled" autocomplete="off">
+                                <label class="btn btn-outline-success py-2" for="toggle-enabled">
+                                    <i class="bi bi-shield-check me-1"></i>Enable Card
+                                </label>
+
+                                <input type="radio" class="btn-check" name="cardStatusToggle" id="toggle-disabled" value="Disabled" autocomplete="off">
+                                <label class="btn btn-outline-danger py-2" for="toggle-disabled">
+                                    <i class="bi bi-shield-slash me-1"></i>Disable Card
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-danger mb-3" id="details-alert" style="display: none;"></div>
+
+                        <button class="btn btn-primary w-100 py-2 fw-semibold" id="btn-details-submit">
+                            <i class="bi bi-check-circle me-1"></i>Submit Status Change
+                        </button>
+                    </div>
+
+                    <!-- Done (Success State) -->
+                    <div id="step-done" class="step-container" style="display: none;">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 40px;"></i>
+                            <h5 class="mt-2 text-white">Status Updated Successfully</h5>
+                            <p class="text-muted small">The card status has been updated in the system and synchronized with the payment provider.</p>
+                        </div>
+
+                        <div class="p-3 mb-3 rounded" style="background: var(--bg-primary); border: 1px solid var(--border-color); font-size: 13px;">
+                            <div class="row g-2">
+                                <div class="col-6 text-muted">Provider:</div>
+                                <div class="col-6 text-end text-white" id="response-provider"></div>
+
+                                <div class="col-6 text-muted">Original Status:</div>
+                                <div class="col-6 text-end text-muted" id="response-old-status"></div>
+
+                                <div class="col-6 text-muted">New Status:</div>
+                                <div class="col-6 text-end fw-bold" id="response-new-status"></div>
+
+                                <div class="col-12 mt-2 border-top border-secondary pt-2">
+                                    <small class="text-muted d-block mb-1">Provider Response API:</small>
+                                    <pre class="bg-dark p-2 rounded text-info font-mono text-start mb-0" id="response-payload" style="max-height: 120px; overflow-y: auto; font-size: 11px;"></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100 py-2 fw-semibold" id="btn-done-finish">
+                            <i class="bi bi-check2-all me-1"></i>Done
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
 }
-
-<!-- Status Panel Modal -->
-<div class="modal fade" id="statusPanelModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-shield-lock"></i> Card Status Authorization</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="statusPanelBody">
-                <!-- Filled by JS -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Card Form Modal -->
-<div class="modal fade" id="cardFormModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cardFormTitle">Add New Card</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="cardFormBody">
-                <!-- Filled by partial view -->
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
 <script>
-    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    let currentStep = 'request';
+    let selectedCardId = null;
+    let currentOtpCode = '';
+    let selectedCardData = null;
 
-    function addCard() {
-        fetch('@Url.Action("Create")', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.text())
-            .then(html => {
-                document.getElementById('cardFormTitle').textContent = 'Add New Card';
-                document.getElementById('cardFormBody').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('cardFormModal')).show();
-            });
+    function setStep(step) {
+        currentStep = step;
+        
+        document.getElementById('step-request').style.display = 'none';
+        document.getElementById('step-verify').style.display = 'none';
+        document.getElementById('step-details').style.display = 'none';
+        document.getElementById('step-done').style.display = 'none';
+        
+        if (step === 'request') {
+            document.getElementById('step-request').style.display = 'block';
+        } else if (step === 'verify') {
+            document.getElementById('step-verify').style.display = 'block';
+        } else if (step === 'details') {
+            document.getElementById('step-details').style.display = 'block';
+        } else if (step === 'done') {
+            document.getElementById('step-done').style.display = 'block';
+        }
     }
 
-    function editCard(id) {
-        fetch('@Url.Action("Edit")/' + id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.text())
-            .then(html => {
-                document.getElementById('cardFormTitle').textContent = 'Edit Card';
-                document.getElementById('cardFormBody').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('cardFormModal')).show();
-            });
+    function selectCard(id, name, provider, type, maskedNumber, expiration, status, phone, email, element) {
+        selectedCardId = id;
+        currentOtpCode = '';
+        selectedCardData = { id, name, provider, type, maskedNumber, expiration, status, phone, email };
+
+        // Highlight selected card item
+        document.querySelectorAll('.card-item').forEach(el => el.classList.remove('selected'));
+        if (element) {
+            element.classList.add('selected');
+        } else {
+            const item = document.getElementById(`card-item-${id}`);
+            if (item) item.classList.add('selected');
+        }
+
+        // Display panel
+        document.getElementById('auth-placeholder').style.display = 'none';
+        document.getElementById('auth-panel').style.display = 'block';
+
+        // Extract last 4 digits of phone
+        const last4 = phone && phone.length >= 4 ? phone.slice(-4) : (phone || '****');
+        document.getElementById('phone-last-4').textContent = last4;
+
+        // Reset alerts & inputs
+        document.getElementById('request-alert').style.display = 'none';
+        document.getElementById('verify-alert').style.display = 'none';
+        document.getElementById('verify-error-msg').style.display = 'none';
+        document.getElementById('verification-code-input').value = '';
+        document.getElementById('dev-code-display').style.display = 'none';
+        document.getElementById('dev-code-value').textContent = '';
+        document.getElementById('details-alert').style.display = 'none';
+
+        setStep('request');
     }
 
-    function deleteCard(id, name) {
-        if (!confirm('Delete card "' + name + '"? This cannot be undone.')) return;
-        const form = new FormData();
-        form.append('__RequestVerificationToken', antiForgeryToken || getAntiForgeryToken());
-        fetch('@Url.Action("Delete")/' + id, { method: 'POST', body: form })
-            .then(r => r.json())
-            .then(data => { if (data.success) location.reload(); else alert(data.error || 'Delete failed'); });
-    }
+    document.getElementById('btn-request-otp').addEventListener('click', function() {
+        if (!selectedCardId) return;
 
-    function getAntiForgeryToken() {
-        const token = document.querySelector('[name=__RequestVerificationToken]');
-        return token ? token.value : '';
-    }
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Requesting...';
 
-    function openStatusPanel(cardId, cardName, currentStatus) {
-        document.getElementById('statusPanelBody').innerHTML = `
-            <div class="status-panel">
-                <h6>Card: ${cardName}</h6>
-                <p>Current Status: <strong>${currentStatus}</strong></p>
-                <div class="form-group mb-3">
-                    <label class="form-label">New Status</label>
-                    <select id="newStatus" class="form-control">
-                        <option value="Enabled">Enabled</option>
-                        <option value="Disabled">Disabled</option>
-                    </select>
-                </div>
-                <div class="form-group mb-3" id="otpSection" style="display:none;">
-                    <label class="form-label">OTP Code (6 digits)</label>
-                    <input type="text" id="otpCode" class="form-control" maxlength="6" pattern="\\d{6}" />
-                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="requestOtp(${cardId})">Request OTP</button>
-                </div>
-                <div id="otpResult" class="mt-2"></div>
-                <button class="btn btn-primary mt-3" onclick="submitStatusChange(${cardId})">Confirm Status Change</button>
-            </div>
-        `;
-        new bootstrap.Modal(document.getElementById('statusPanelModal')).show();
-    }
+        const url = '@Url.Action("RequestOtp", "Cards")';
+        const data = { cardId: selectedCardId };
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
 
-    function requestOtp(cardId) {
-        fetch('@Url.Action("RequestOtp")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ cardId: cardId })
+        fetch(url, { 
+            method: 'POST', 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': token
+            }, 
+            body: JSON.stringify(data) 
         })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                document.getElementById('otpSection').style.display = 'block';
-                document.getElementById('otpResult').innerHTML =
-                    '<div class="alert alert-info">OTP sent. Code (dev): ' + (data.code || '******') + '</div>';
-            } else {
-                document.getElementById('otpResult').innerHTML =
-                    '<div class="alert alert-danger">' + (data.error || 'Failed to send OTP') + '</div>';
-            }
-        });
-    }
+            btn.disabled = false;
+            btn.innerHTML = originalText;
 
-    function submitStatusChange(cardId) {
-        const newStatus = document.getElementById('newStatus').value;
-        const otpCode = document.getElementById('otpCode')?.value || '';
-        fetch('@Url.Action("UpdateStatus")', {
+            if (data.success) {
+                if (data.code) {
+                    document.getElementById('dev-code-value').textContent = data.code;
+                    document.getElementById('dev-code-display').style.display = 'block';
+                } else {
+                    document.getElementById('dev-code-display').style.display = 'none';
+                }
+                
+                document.getElementById('verify-alert').style.display = 'none';
+                document.getElementById('verification-code-input').value = '';
+                
+                setStep('verify');
+            } else {
+                const requestAlert = document.getElementById('request-alert');
+                requestAlert.textContent = data.error || 'Failed to request OTP code.';
+                requestAlert.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            const requestAlert = document.getElementById('request-alert');
+            requestAlert.textContent = 'An error occurred. Please try again.';
+            requestAlert.style.display = 'block';
+            console.error(err);
+        });
+    });
+
+    document.getElementById('btn-verify-back').addEventListener('click', function() {
+        setStep('request');
+    });
+
+    document.getElementById('btn-verify-submit').addEventListener('click', function() {
+        if (!selectedCardId) return;
+
+        const input = document.getElementById('verification-code-input');
+        const code = input.value.trim();
+        const errorMsg = document.getElementById('verify-error-msg');
+
+        if (!/^\d{6}$/.test(code)) {
+            errorMsg.style.display = 'block';
+            input.classList.add('is-invalid');
+            return;
+        } else {
+            errorMsg.style.display = 'none';
+            input.classList.remove('is-invalid');
+        }
+
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+        const url = '@Url.Action("VerifyOtp", "Cards")';
+        const data = { cardId: selectedCardId, code: code };
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ cardId: cardId, newStatus: newStatus, otpCode: otpCode })
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify(data)
         })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                location.reload();
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            if (data.verified) {
+                currentOtpCode = code;
+
+                const details = data.cardDetails;
+                document.getElementById('detail-name').textContent = details.cardName;
+                
+                const providerEl = document.getElementById('detail-provider');
+                providerEl.textContent = details.cardProvider;
+                providerEl.className = `badge badge-${details.cardProvider.toLowerCase()}`;
+
+                document.getElementById('detail-type').textContent = details.cardType;
+                
+                let expDateStr = details.expirationDate;
+                if (expDateStr && expDateStr.includes('-')) {
+                    const parts = expDateStr.split('-');
+                    if (parts.length >= 2) {
+                        expDateStr = `${parts[1]}/${parts[0].slice(-2)}`;
+                    }
+                }
+                document.getElementById('detail-expiration').textContent = expDateStr;
+                document.getElementById('detail-number').textContent = details.cardNumberMasked;
+
+                if (details.currentStatus === 'Enabled') {
+                    document.getElementById('toggle-enabled').checked = true;
+                } else {
+                    document.getElementById('toggle-disabled').checked = true;
+                }
+
+                document.getElementById('details-alert').style.display = 'none';
+                setStep('details');
             } else {
-                document.getElementById('otpResult').innerHTML =
-                    '<div class="alert alert-danger">' + (data.error || 'Status update failed') + '</div>';
+                const verifyAlert = document.getElementById('verify-alert');
+                verifyAlert.textContent = data.error || 'Verification failed. Invalid code.';
+                verifyAlert.style.display = 'block';
             }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            const verifyAlert = document.getElementById('verify-alert');
+            verifyAlert.textContent = 'An error occurred. Please try again.';
+            verifyAlert.style.display = 'block';
+            console.error(err);
         });
-    }
+    });
+
+    document.getElementById('btn-details-submit').addEventListener('click', function() {
+        if (!selectedCardId || !currentOtpCode) return;
+
+        const enabledRadio = document.getElementById('toggle-enabled');
+        const newStatus = enabledRadio.checked ? 'Enabled' : 'Disabled';
+
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+
+        const url = '@Url.Action("UpdateStatus", "Cards")';
+        const data = { cardId: selectedCardId, newStatus: newStatus, otpCode: currentOtpCode };
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            if (data.success) {
+                document.getElementById('response-provider').textContent = data.provider;
+                document.getElementById('response-old-status').textContent = data.oldStatus;
+                
+                const newStatusEl = document.getElementById('response-new-status');
+                newStatusEl.textContent = data.newStatus;
+                if (data.newStatus === 'Enabled') {
+                    newStatusEl.className = 'col-6 text-end fw-bold text-success';
+                } else {
+                    newStatusEl.className = 'col-6 text-end fw-bold text-danger';
+                }
+
+                let responseText = data.providerResponse;
+                try {
+                    const parsed = JSON.parse(responseText);
+                    responseText = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // non-JSON
+                }
+                document.getElementById('response-payload').textContent = responseText;
+
+                setStep('done');
+            } else {
+                const detailsAlert = document.getElementById('details-alert');
+                detailsAlert.textContent = data.error || 'Failed to update status.';
+                detailsAlert.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            const detailsAlert = document.getElementById('details-alert');
+            detailsAlert.textContent = 'An error occurred. Please try again.';
+            detailsAlert.style.display = 'block';
+            console.error(err);
+        });
+    });
+
+    document.getElementById('btn-done-finish').addEventListener('click', function() {
+        location.reload();
+    });
 </script>
 }
