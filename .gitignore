@@ -1,7 +1,69 @@
+## .NET build artifacts
 bin/
 obj/
-*.user
+[Bb]in/
+[Oo]bj/
+
+## Visual Studio
 .vs/
-*.log
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## JetBrains Rider
+.idea/
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa]r[Tt]ifacts/
+publish/
+*.publishproj
+*.publishsettings
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Secrets & local config
 appsettings.Local.json
+appsettings.*.Local.json
 secrets.json
+*.secret.json
+
+## Logs
+*.log
+logs/
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResults/
+
+## temp
+*.tmp
+*.cache
+*.swp
+*~
+
+## OS
+.DS_Store
+Thumbs.db
+
+## EF Core
+*.dbmdl
+*.dbproj.schemaview
+*.ldf
+*.mdf

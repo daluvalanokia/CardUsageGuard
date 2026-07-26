@@ -1,0 +1,24 @@
+# Use LF in the repo, let Git handle conversion per platform
+* text=auto eol=lf
+
+# C# and Razor files
+*.cs text eol=lf
+*.cshtml text eol=lf
+*.csproj text eol=lf
+*.sln text eol=crlf
+
+# Config and JSON
+*.json text eol=lf
+*.config text eol=lf
+*.xml text eol=lf
+
+# CSS and JS
+*.css text eol=lf
+*.js text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
