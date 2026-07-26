@@ -21,7 +21,7 @@ public class DatabaseController : Controller
         _userManager = userManager;
     }
 
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
         ViewBag.Tables = new[] { "Cards", "AuditLogs", "OtpCodes", "Users" };
         return View();

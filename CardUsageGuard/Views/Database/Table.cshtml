@@ -86,7 +86,7 @@
 
     <div class="pagination-bar" style="justify-content: flex-start; gap: 16px;">
         <span class="pagination-info">
-            <strong>@currentTable</strong> — @totalCount total records, showing @(rowCount) on page @page of @totalPages
+            <strong>@currentTable</strong> — @totalCount total records, showing @(rowCount) on page @(page) of @totalPages
         </span>
     </div>
 
@@ -147,7 +147,7 @@
         </div>
 
         <div class="pagination-bar mt-3">
-            <span class="pagination-info">Page @page of @totalPages</span>
+            <span class="pagination-info">Page @(page) of @totalPages</span>
             <div class="pagination-controls">
                 @if (page > 1)
                 {
