@@ -1,16 +1,11 @@
 @model List<CardViewModel>
 @using CardUsageGuard.Models.Enums
 @{
-    ViewData["Title"] = "Secured Card Manage";
+    ViewData["Title"] = "Manage Cards";
 }
 
 <style>
-    /* Accordion panel */
-    .card-accordion {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
+    .card-accordion { display: flex; flex-direction: column; gap: 10px; }
     .card-panel {
         background: var(--bg-secondary);
         border: 1px solid var(--border-color);
@@ -18,82 +13,51 @@
         overflow: hidden;
         transition: border-color 0.2s ease;
     }
-    .card-panel:hover {
-        border-color: rgba(59, 130, 246, 0.4);
-    }
+    .card-panel:hover { border-color: rgba(59, 130, 246, 0.4); }
     .card-panel.expanded {
         border-color: var(--accent-blue);
         box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
     }
-    /* Card header (always visible) */
     .card-panel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 20px;
-        cursor: pointer;
-        user-select: none;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px; cursor: pointer; user-select: none;
         transition: background 0.15s ease;
     }
-    .card-panel-header:hover {
-        background: rgba(255, 255, 255, 0.03);
-    }
+    .card-panel-header:hover { background: rgba(255, 255, 255, 0.03); }
     .card-panel.expanded .card-panel-header {
         background: rgba(59, 130, 246, 0.08);
         border-bottom: 1px solid var(--border-color);
     }
-    .card-panel-chevron {
-        transition: transform 0.25s ease;
-        color: var(--text-muted);
-    }
-    .card-panel.expanded .card-panel-chevron {
-        transform: rotate(180deg);
-        color: var(--accent-blue);
-    }
-    /* Card body (collapsible) */
-    .card-panel-body {
-        display: none;
-        padding: 20px;
-    }
-    .card-panel.expanded .card-panel-body {
-        display: block;
-    }
-    /* Status badge */
+    .card-panel-chevron { transition: transform 0.25s ease; color: var(--text-muted); }
+    .card-panel.expanded .card-panel-chevron { transform: rotate(180deg); color: var(--accent-blue); }
+    .card-panel-body { display: none; padding: 20px; }
+    .card-panel.expanded .card-panel-body { display: block; }
     .status-pill {
-        border-radius: 6px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
+        border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 4px;
     }
-    .status-pill.enabled {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-    }
-    .status-pill.disabled {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
-    /* Step container */
+    .status-pill.enabled { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .status-pill.disabled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
     .step-container {
-        padding: 18px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
+        padding: 18px; background: var(--bg-card);
+        border: 1px solid var(--border-color); border-radius: var(--radius-sm);
     }
-    .font-mono {
-        font-family: "SF Mono", Monaco, Consolas, monospace !important;
+    .step-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 50%; font-size: 13px; font-weight: 700;
     }
+    .step-badge.active { background: var(--accent-blue); color: #fff; }
+    .step-badge.done { background: #10b981; color: #fff; }
+    .step-badge.pending { background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border-color); }
+    .font-mono { font-family: "SF Mono", Monaco, Consolas, monospace !important; }
 </style>
 
 <div class="page-header">
     <div>
-        <h1>Secured Card Manage</h1>
-        <p class="text-muted">Select a card to expand, then authorize to block or unblock usage</p>
+        <h1>Manage Cards</h1>
+        <p class="text-muted">Click a card to expand, then verify your identity to enable or disable it</p>
     </div>
-    <button onclick="location.reload()" class="btn btn-icon" title="Refresh">
+    <button onclick="location.reload()" class="btn btn-icon" title="Refresh card list">
         <i class="bi bi-arrow-clockwise"></i>
     </button>
 </div>
@@ -105,8 +69,8 @@
     <div class="empty-state">
         <i class="bi bi-credit-card-2-front" style="font-size: 48px; color: var(--text-muted);"></i>
         <h3 class="mt-3">No cards found</h3>
-        <p class="text-muted">You do not have any cards configured in your system.</p>
-        <p>Go to <a asp-controller="Home" asp-action="Settings" class="text-info text-decoration-none fw-bold">Settings</a> to manage cards.</p>
+        <p class="text-muted">You haven't added any cards yet.</p>
+        <p>Go to <a asp-controller="Home" asp-action="Settings" class="text-info text-decoration-none fw-bold">Settings</a> to add a card.</p>
     </div>
 }
 else
@@ -121,18 +85,10 @@ else
                 CardProvider.Amex => "text-success",
                 _ => "text-info"
             };
+            var phoneLast4 = card.PhoneNumber.Length >= 4 ? card.PhoneNumber[^4..] : "****";
 
             <!-- Collapsible Card Panel -->
-            <div class="card-panel" id="panel-@card.Id"
-                 data-card-id="@card.Id"
-                 data-card-name="@card.CardName"
-                 data-card-provider="@card.CardProvider"
-                 data-card-type="@card.CardType"
-                 data-card-number="@card.MaskedCardNumber"
-                 data-card-expiration="@card.ExpirationDate.ToString("MM/yy")"
-                 data-card-status="@card.Status"
-                 data-card-phone="@card.PhoneNumber"
-                 data-card-email="@card.Email">
+            <div class="card-panel" id="panel-@card.Id" data-card-id="@card.Id">
 
                 <!-- Always-visible header -->
                 <div class="card-panel-header" onclick="togglePanel(@card.Id)">
@@ -160,56 +116,68 @@ else
                 <div class="card-panel-body">
                     <div class="auth-flow" id="auth-flow-@card.Id">
 
-                        <!-- Step 1: Request -->
+                        <!-- Step 1: Request OTP -->
                         <div class="step-container mb-3" id="step-request-@card.Id">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge bg-primary">Step 1</span>
-                                <h6 class="m-0 text-white">Request Verification Code</h6>
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="step-badge active">1</span>
+                                <h6 class="m-0 text-white">Verify Your Identity</h6>
                             </div>
-                            <p class="text-secondary small mb-2">
-                                A 6-digit code will be sent to your phone ending in
-                                <strong class="text-white">•••• @(card.PhoneNumber.Length >= 4 ? card.PhoneNumber[^4..] : "****")</strong>
+                            <p class="text-secondary small mb-3">
+                                To change this card's status, we need to verify it's you. A 6-digit verification code
+                                will be sent to the phone number ending in <strong class="text-white">•••• @phoneLast4</strong>.
                             </p>
-                            <div class="alert alert-danger mb-2" id="request-alert-@card.Id" style="display:none;"></div>
-                            <button class="btn btn-primary w-100" id="btn-request-@card.Id" onclick="requestOtp(@card.Id)">
-                                <i class="bi bi-chat-left-text me-1"></i>Request Code
+                            <div class="alert alert-danger mb-3" id="request-alert-@card.Id" style="display:none;"></div>
+                            <button class="btn btn-primary w-100 py-2" id="btn-request-@card.Id" onclick="requestOtp(@card.Id)">
+                                <i class="bi bi-send me-2"></i>Send Verification Code
                             </button>
                         </div>
 
-                        <!-- Step 2: Verify -->
+                        <!-- Step 2: Enter OTP -->
                         <div class="step-container mb-3" id="step-verify-@card.Id" style="display:none;">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge bg-primary">Step 2</span>
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="step-badge done">1</span>
+                                <i class="bi bi-chevron-right text-muted small"></i>
+                                <span class="step-badge active">2</span>
                                 <h6 class="m-0 text-white">Enter Verification Code</h6>
                             </div>
-                            <p class="text-secondary small mb-2">Enter the 6-digit OTP sent to your device.</p>
-                            <input type="text" id="otp-input-@card.Id" class="form-control text-center font-mono fs-4 mb-2" placeholder="000000" maxlength="6" style="letter-spacing:0.3em; max-width:200px; margin:0 auto;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-                            <div class="p-2 mb-2 rounded text-center" id="dev-code-@card.Id" style="background:rgba(245,158,11,0.1); border:1px dashed rgba(245,158,11,0.3); display:none;">
-                                <span class="text-warning small">Dev Code: <strong id="dev-code-val-@card.Id" class="font-mono"></strong></span>
+                            <p class="text-secondary small mb-3">
+                                Enter the 6-digit code we sent to your phone. The code expires in 5 minutes.
+                            </p>
+                            <input type="text" id="otp-input-@card.Id" class="form-control text-center font-mono fs-4 mb-2" placeholder="Enter code" maxlength="6" style="letter-spacing:0.3em; max-width:200px; margin:0 auto;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                            <div class="p-2 mb-3 rounded text-center" id="dev-code-@card.Id" style="background:rgba(245,158,11,0.1); border:1px dashed rgba(245,158,11,0.3); display:none;">
+                                <span class="text-warning small">Test mode — your code: <strong id="dev-code-val-@card.Id" class="font-mono fs-5"></strong></span>
                             </div>
-                            <div class="alert alert-danger mb-2" id="verify-alert-@card.Id" style="display:none;"></div>
+                            <div class="alert alert-danger mb-3" id="verify-alert-@card.Id" style="display:none;"></div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-outline-light flex-grow-1" onclick="resetToStep1(@card.Id)"><i class="bi bi-chevron-left me-1"></i>Back</button>
-                                <button class="btn btn-primary flex-grow-1" id="btn-verify-@card.Id" onclick="verifyOtp(@card.Id)"><i class="bi bi-shield-check me-1"></i>Verify</button>
+                                <button class="btn btn-outline-secondary flex-grow-1 py-2" onclick="resetToStep1(@card.Id)">
+                                    <i class="bi bi-arrow-left me-1"></i> Back
+                                </button>
+                                <button class="btn btn-primary flex-grow-1 py-2" id="btn-verify-@card.Id" onclick="verifyOtp(@card.Id)">
+                                    <i class="bi bi-shield-check me-2"></i>Confirm Code
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Step 3: Details & Toggle -->
+                        <!-- Step 3: Toggle Status -->
                         <div class="step-container mb-3" id="step-details-@card.Id" style="display:none;">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge bg-success">Step 3</span>
-                                <h6 class="m-0 text-white">Toggle Card Status</h6>
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="step-badge done">1</span>
+                                <i class="bi bi-chevron-right text-muted small"></i>
+                                <span class="step-badge done">2</span>
+                                <i class="bi bi-chevron-right text-muted small"></i>
+                                <span class="step-badge active">3</span>
+                                <h6 class="m-0 text-white">Enable or Disable Card</h6>
                             </div>
                             <!-- Card details -->
                             <div class="p-3 mb-3 rounded" style="background:var(--bg-primary); border:1px solid var(--border-color); font-size:13px;">
                                 <div class="row g-2">
-                                    <div class="col-5 text-muted">Card:</div>
-                                    <div class="col-7 text-end text-white fw-semibold" id="d-name-@card.Id">@card.CardName</div>
+                                    <div class="col-5 text-muted">Card Name:</div>
+                                    <div class="col-7 text-end text-white fw-semibold">@card.CardName</div>
                                     <div class="col-5 text-muted">Provider:</div>
                                     <div class="col-7 text-end"><span class="badge badge-@card.CardProvider.ToString().ToLower()">@card.CardProvider</span></div>
-                                    <div class="col-5 text-muted">Number:</div>
-                                    <div class="col-7 text-end text-white font-mono" id="d-number-@card.Id">@card.MaskedCardNumber</div>
-                                    <div class="col-5 text-muted">Current:</div>
+                                    <div class="col-5 text-muted">Card Number:</div>
+                                    <div class="col-7 text-end text-white font-mono">@card.MaskedCardNumber</div>
+                                    <div class="col-5 text-muted">Current Status:</div>
                                     <div class="col-7 text-end" id="d-status-@card.Id">
                                         @if (card.Status == CardStatus.Enabled)
                                         { <span class="text-success fw-semibold">Enabled</span> }
@@ -220,36 +188,40 @@ else
                             </div>
                             <!-- Toggle -->
                             <div class="mb-3">
-                                <label class="form-label text-secondary small d-block mb-2">New Status</label>
+                                <label class="form-label text-secondary small d-block mb-2">Choose new status:</label>
                                 <div class="btn-group w-100">
                                     <input type="radio" class="btn-check" name="status-@card.Id" id="enable-@card.Id" value="Enabled" autocomplete="off" @(card.Status == CardStatus.Enabled ? "checked" : "")>
-                                    <label class="btn btn-outline-success" for="enable-@card.Id"><i class="bi bi-shield-check me-1"></i>Enable</label>
+                                    <label class="btn btn-outline-success py-2" for="enable-@card.Id"><i class="bi bi-shield-check me-1"></i>Enable Card</label>
                                     <input type="radio" class="btn-check" name="status-@card.Id" id="disable-@card.Id" value="Disabled" autocomplete="off" @(card.Status == CardStatus.Disabled ? "checked" : "")>
-                                    <label class="btn btn-outline-danger" for="disable-@card.Id"><i class="bi bi-shield-slash me-1"></i>Disable</label>
+                                    <label class="btn btn-outline-danger py-2" for="disable-@card.Id"><i class="bi bi-shield-slash me-1"></i>Disable Card</label>
                                 </div>
                             </div>
-                            <div class="alert alert-danger mb-2" id="details-alert-@card.Id" style="display:none;"></div>
-                            <button class="btn btn-primary w-100" id="btn-submit-@card.Id" onclick="submitStatusChange(@card.Id)"><i class="bi bi-check-circle me-1"></i>Submit Status Change</button>
+                            <div class="alert alert-danger mb-3" id="details-alert-@card.Id" style="display:none;"></div>
+                            <button class="btn btn-primary w-100 py-2" id="btn-submit-@card.Id" onclick="submitStatusChange(@card.Id)">
+                                <i class="bi bi-check2-circle me-2"></i>Apply Status Change
+                            </button>
                         </div>
 
-                        <!-- Step 4: Done -->
+                        <!-- Step 4: Success -->
                         <div class="step-container" id="step-done-@card.Id" style="display:none;">
-                            <div class="text-center mb-2">
-                                <i class="bi bi-check-circle-fill text-success" style="font-size:36px;"></i>
-                                <h6 class="mt-2 text-white">Status Updated</h6>
-                                <p class="text-muted small mb-2">Card status synced with the payment provider.</p>
+                            <div class="text-center mb-3">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size:42px;"></i>
+                                <h6 class="mt-2 text-white">Status Updated Successfully</h6>
+                                <p class="text-muted small mb-3">Your card status has been synced with the payment provider.</p>
                             </div>
                             <div class="p-3 mb-3 rounded" style="background:var(--bg-primary); border:1px solid var(--border-color); font-size:13px;">
                                 <div class="row g-1">
                                     <div class="col-6 text-muted">Provider:</div>
                                     <div class="col-6 text-end text-white" id="r-provider-@card.Id"></div>
-                                    <div class="col-6 text-muted">Old Status:</div>
+                                    <div class="col-6 text-muted">Previous Status:</div>
                                     <div class="col-6 text-end text-muted" id="r-old-@card.Id"></div>
                                     <div class="col-6 text-muted">New Status:</div>
                                     <div class="col-6 text-end fw-bold" id="r-new-@card.Id"></div>
                                 </div>
                             </div>
-                            <button class="btn btn-primary w-100" onclick="location.reload()"><i class="bi bi-check2-all me-1"></i>Done</button>
+                            <button class="btn btn-primary w-100 py-2" onclick="location.reload()">
+                                <i class="bi bi-check2-all me-2"></i>Finish
+                            </button>
                         </div>
 
                     </div>
@@ -268,21 +240,17 @@ else
         const panel = document.getElementById('panel-' + cardId);
         const isExpanded = panel.classList.contains('expanded');
 
-        // Collapse all panels — only one open at a time
-        document.querySelectorAll('.card-panel').forEach(p => {
-            p.classList.remove('expanded');
-        });
+        // Collapse all — only one open at a time
+        document.querySelectorAll('.card-panel').forEach(p => p.classList.remove('expanded'));
 
         if (!isExpanded) {
             panel.classList.add('expanded');
-            // Reset this card's auth flow to step 1
             showStep(cardId, 'request');
         }
     }
 
     function showStep(cardId, step) {
-        const steps = ['request', 'verify', 'details', 'done'];
-        steps.forEach(s => {
+        ['request', 'verify', 'details', 'done'].forEach(s => {
             const el = document.getElementById('step-' + s + '-' + cardId);
             if (el) el.style.display = s === step ? 'block' : 'none';
         });
@@ -301,7 +269,7 @@ else
 
         const orig = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending code...';
 
         fetch('@Url.Action("RequestOtp", "Cards")', {
             method: 'POST',
@@ -319,21 +287,20 @@ else
 
             if (data.success) {
                 otpStore[cardId] = data.code;
-                // Show dev code in development
                 if (data.code) {
                     devCodeVal.textContent = data.code;
                     devCodeEl.style.display = 'block';
                 }
                 showStep(cardId, 'verify');
             } else {
-                alertEl.textContent = data.error || 'Failed to send OTP.';
+                alertEl.textContent = data.error || 'Could not send verification code. Please try again.';
                 alertEl.style.display = 'block';
             }
         })
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = orig;
-            alertEl.textContent = 'Network error. Please try again.';
+            alertEl.textContent = 'Network error. Please check your connection and try again.';
             alertEl.style.display = 'block';
         });
     }
@@ -347,14 +314,14 @@ else
         alertEl.style.display = 'none';
 
         if (!/^\d{6}$/.test(code)) {
-            alertEl.textContent = 'Please enter a valid 6-digit code.';
+            alertEl.textContent = 'Please enter all 6 digits of your verification code.';
             alertEl.style.display = 'block';
             return;
         }
 
         const orig = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifying...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
 
         fetch('@Url.Action("VerifyOtp", "Cards")', {
             method: 'POST',
@@ -374,7 +341,7 @@ else
                 otpStore[cardId] = code;
                 showStep(cardId, 'details');
             } else {
-                alertEl.textContent = data.error || 'Invalid verification code.';
+                alertEl.textContent = data.error || 'That code didn\'t match. Please check and try again.';
                 alertEl.style.display = 'block';
             }
         })
@@ -396,14 +363,14 @@ else
         alertEl.style.display = 'none';
 
         if (!otpCode) {
-            alertEl.textContent = 'OTP verification required. Please go back to Step 1.';
+            alertEl.textContent = 'Your verification session expired. Please go back to Step 1 to request a new code.';
             alertEl.style.display = 'block';
             return;
         }
 
         const orig = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
         fetch('@Url.Action("UpdateStatus", "Cards")', {
             method: 'POST',
@@ -427,7 +394,7 @@ else
                 newEl.className = 'col-6 text-end fw-bold ' + (data.newStatus === 'Enabled' ? 'text-success' : 'text-danger');
                 showStep(cardId, 'done');
             } else {
-                alertEl.textContent = data.error || 'Failed to update status.';
+                alertEl.textContent = data.error || 'Could not update card status. Please try again.';
                 alertEl.style.display = 'block';
             }
         })
