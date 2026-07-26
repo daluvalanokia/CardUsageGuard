@@ -31,7 +31,7 @@ public class HomeController : Controller
         var isAdmin = User.IsInRole("admin");
         var userId = _userManager.GetUserId(User)!;
 
-        // Load cards
+        // Load cards only — audit logs are now on the dedicated Audit Log page
         var cardsQuery = _db.Cards.AsQueryable();
         if (!isAdmin)
         {
@@ -53,35 +53,7 @@ public class HomeController : Controller
             })
             .ToListAsync();
 
-        // Load audit logs (last 100)
-        var logsQuery = _db.AuditLogs.AsQueryable();
-        if (!isAdmin)
-        {
-            logsQuery = logsQuery.Where(a => a.ApplicationUserId == userId);
-        }
-        var logs = await logsQuery
-            .OrderByDescending(a => a.Timestamp)
-            .Take(100)
-            .Select(a => new AuditLogViewModel
-            {
-                Id = a.Id,
-                Timestamp = a.Timestamp,
-                ActionType = a.ActionType,
-                CardIdMasked = a.CardIdMasked,
-                Provider = a.Provider,
-                HttpMethod = a.HttpMethod,
-                HttpUrl = a.HttpUrl,
-                HttpStatusCode = a.HttpStatusCode,
-                Success = a.Success,
-                ErrorCode = a.ErrorCode,
-                ErrorMessage = a.ErrorMessage,
-                DurationMs = a.DurationMs,
-                LogLevel = a.LogLevel
-            })
-            .ToListAsync();
-
         ViewBag.Cards = cards;
-        ViewBag.Logs = logs;
 
         return View();
     }

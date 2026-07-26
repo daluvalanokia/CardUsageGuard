@@ -27,11 +27,11 @@
                 <a asp-controller="Cards" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Cards" ? "active" : "")">
                     <i class="bi bi-credit-card"></i> Manage Cards
                 </a>
+                <a asp-controller="Home" asp-action="Settings" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active" : "")">
+                    <i class="bi bi-gear"></i> Settings
+                </a>
                 <a asp-controller="AuditLog" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AuditLog" ? "active" : "")">
                     <i class="bi bi-list-check"></i> Audit Log
-                </a>
-                <a asp-controller="Home" asp-action="Settings" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active" : "")">
-                    <i class="bi bi-gear"></i> Settings
                 </a>
                 @if (isAdmin)
                 {
@@ -57,6 +57,8 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

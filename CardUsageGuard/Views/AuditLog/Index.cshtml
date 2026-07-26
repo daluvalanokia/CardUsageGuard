@@ -1,9 +1,90 @@
 @model List<AuditLogViewModel>
-@{ ViewData["Title"] = "Audit Log"; }
+@using CardUsageGuard.Models.Enums
+@{
+    ViewData["Title"] = "Audit Log";
+}
+
+<style>
+    .sortable-header {
+        white-space: nowrap;
+        user-select: none;
+    }
+    .sortable-header:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--accent-blue) !important;
+    }
+    .filter-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+    }
+    .audit-count-badge {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+</style>
 
 <div class="page-header">
-    <h1>Audit Log</h1>
-    <p class="text-muted">Full audit trail of all sensitive operations</p>
+    <div>
+        <h1>Audit Log</h1>
+        <p class="text-muted">Full audit trail of all sensitive operations</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="audit-count-badge">@Model.Count entries</span>
+        <button onclick="location.reload()" class="btn btn-icon" title="Refresh">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Filter Controls -->
+<div class="filter-section p-3 mb-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label for="logSearch" class="form-label">Search Logs</label>
+            <div class="input-group">
+                <span class="input-group-text bg-card border-color text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" id="logSearch" onkeyup="filterLogs()" class="form-control" placeholder="Search by Card ID, action, error..." />
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label for="logActionFilter" class="form-label">Action</label>
+            <select id="logActionFilter" onchange="filterLogs()" class="form-select">
+                <option value="">All Actions</option>
+                @foreach (var action in Enum.GetValues<AuditActionType>())
+                {
+                    <option value="@action">@action</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="logProviderFilter" class="form-label">Provider</label>
+            <select id="logProviderFilter" onchange="filterLogs()" class="form-select">
+                <option value="">All Providers</option>
+                @foreach (var provider in Enum.GetValues<CardProvider>())
+                {
+                    <option value="@provider">@provider</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="logSuccessFilter" class="form-label">Status</label>
+            <select id="logSuccessFilter" onchange="filterLogs()" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="true">Success</option>
+                <option value="false">Failed</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button onclick="clearFilters()" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-x-circle"></i> Clear Filters
+            </button>
+        </div>
+    </div>
 </div>
 
 @if (!Model.Any())
@@ -17,44 +98,184 @@
 else
 {
     <div class="audit-table-container">
-        <table class="table audit-table">
+        <table class="table audit-table" id="logsTable">
             <thead>
                 <tr>
-                    <th>Timestamp</th>
-                    <th>Action</th>
-                    <th>Card ID</th>
-                    <th>Provider</th>
-                    <th>HTTP</th>
-                    <th>Status</th>
-                    <th>Duration</th>
-                    <th>Error</th>
+                    <th onclick="sortTable('logsTable', 0, 'date')" style="cursor: pointer;" class="sortable-header">
+                        Timestamp <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 1, 'string')" style="cursor: pointer;" class="sortable-header">
+                        Action <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 2, 'string')" style="cursor: pointer;" class="sortable-header">
+                        Provider <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 3, 'string')" style="cursor: pointer;" class="sortable-header">
+                        HTTP <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 4, 'string')" style="cursor: pointer;" class="sortable-header">
+                        Status <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 5, 'string')" style="cursor: pointer;" class="sortable-header">
+                        Card ID <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 6, 'string')" style="cursor: pointer;" class="sortable-header">
+                        Error <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
+                    <th onclick="sortTable('logsTable', 7, 'number')" style="cursor: pointer;" class="sortable-header">
+                        Duration <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var log in Model)
                 {
-                    <tr class="audit-row audit-@(log.Success ? "success" : "fail")">
-                        <td class="font-mono">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
-                        <td><span class="badge badge-action">@log.ActionType</span></td>
-                        <td class="font-mono">@log.CardIdMasked</td>
-                        <td>@(log.Provider ?? "—")</td>
-                        <td>@(log.HttpMethod ?? "—") @(log.HttpStatusCode?.ToString() ?? "")</td>
-                        <td>
-                            @if (log.Success)
-                            { <span class="text-success"><i class="bi bi-check-circle-fill"></i> Success</span> }
-                            else
-                            { <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Failed</span> }
+                    <tr class="audit-row audit-@(log.Success ? "success" : "fail")" 
+                        data-action="@log.ActionType" 
+                        data-provider="@(log.Provider ?? "")" 
+                        data-success="@log.Success.ToString().ToLower()">
+                        <td class="font-mono" data-sort="@log.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss")">
+                            @log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
                         </td>
-                        <td>@log.DurationMs ms</td>
+                        <td><span class="badge badge-action">@log.ActionType</span></td>
+                        <td>@(log.Provider ?? "—")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(log.HttpMethod))
+                            {
+                                <span>@log.HttpMethod @(log.HttpStatusCode?.ToString() ?? "")</span>
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td data-sort="@log.Success.ToString().ToLower()">
+                            @if (log.Success)
+                            {
+                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Success</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Failed</span>
+                            }
+                        </td>
+                        <td class="font-mono">@log.CardIdMasked</td>
                         <td>
                             @if (!string.IsNullOrEmpty(log.ErrorMessage))
-                            { <span class="text-danger" title="@log.ErrorMessage">@log.ErrorCode</span> }
+                            {
+                                <span class="text-danger" title="@log.ErrorMessage">@log.ErrorCode</span>
+                            }
                             else
-                            { <span class="text-muted">—</span> }
+                            {
+                                <span class="text-muted">—</span>
+                            }
                         </td>
+                        <td data-sort="@log.DurationMs">@log.DurationMs ms</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+}
+
+@section Scripts {
+<script>
+    function filterLogs() {
+        const searchText = document.getElementById('logSearch').value.toLowerCase();
+        const actionFilter = document.getElementById('logActionFilter').value;
+        const providerFilter = document.getElementById('logProviderFilter').value;
+        const successFilter = document.getElementById('logSuccessFilter').value;
+
+        const rows = document.querySelectorAll('#logsTable tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const action = row.getAttribute('data-action') || '';
+            const provider = row.getAttribute('data-provider') || '';
+            const success = row.getAttribute('data-success') || '';
+
+            const matchesSearch = !searchText || text.includes(searchText);
+            const matchesAction = !actionFilter || action === actionFilter;
+            const matchesProvider = !providerFilter || provider === providerFilter;
+            const matchesSuccess = !successFilter || success === successFilter;
+
+            if (matchesSearch && matchesAction && matchesProvider && matchesSuccess) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        const container = document.querySelector('.audit-table-container');
+        let noLogsMsg = document.getElementById('noLogsFilteredMessage');
+        if (visibleCount === 0 && rows.length > 0) {
+            if (!noLogsMsg) {
+                noLogsMsg = document.createElement('div');
+                noLogsMsg.id = 'noLogsFilteredMessage';
+                noLogsMsg.className = 'text-center py-4 text-muted';
+                noLogsMsg.innerHTML = '<i class="bi bi-search d-block fs-3 mb-2"></i> No matching logs found';
+                container.appendChild(noLogsMsg);
+            } else {
+                noLogsMsg.style.display = 'block';
+            }
+        } else if (noLogsMsg) {
+            noLogsMsg.style.display = 'none';
+        }
+    }
+
+    function clearFilters() {
+        document.getElementById('logSearch').value = '';
+        document.getElementById('logActionFilter').value = '';
+        document.getElementById('logProviderFilter').value = '';
+        document.getElementById('logSuccessFilter').value = '';
+        filterLogs();
+    }
+
+    function sortTable(tableId, colIndex, type) {
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0) return;
+        
+        let isAsc = true;
+        const header = table.querySelectorAll('thead th')[colIndex];
+        if (header.classList.contains('sort-asc')) {
+            isAsc = false;
+            header.classList.remove('sort-asc');
+            header.classList.add('sort-desc');
+        } else {
+            table.querySelectorAll('thead th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                const icon = th.querySelector('.bi-sort-indicator');
+                if (icon) icon.className = 'bi bi-arrow-down-up bi-sort-indicator text-muted ms-1';
+            });
+            header.classList.add('sort-asc');
+        }
+
+        const icon = header.querySelector('.bi-sort-indicator');
+        if (icon) {
+            icon.className = isAsc ? 'bi bi-arrow-up bi-sort-indicator text-primary ms-1' : 'bi bi-arrow-down bi-sort-indicator text-primary ms-1';
+        }
+
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[colIndex];
+            const cellB = rowB.cells[colIndex];
+            let valA = cellA.getAttribute('data-sort') || cellA.textContent.trim();
+            let valB = cellB.getAttribute('data-sort') || cellB.textContent.trim();
+
+            if (type === 'number') {
+                return isAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+            } else if (type === 'date') {
+                return isAsc ? new Date(valA) - new Date(valB) : new Date(valB) - new Date(valA);
+            } else {
+                return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+    }
+</script>
 }

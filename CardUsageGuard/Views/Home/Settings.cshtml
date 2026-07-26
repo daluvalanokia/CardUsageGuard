@@ -2,7 +2,6 @@
 @using CardUsageGuard.Models.Enums
 @{
     var cards = ViewBag.Cards as List<CardViewModel> ?? new List<CardViewModel>();
-    var logs = ViewBag.Logs as List<AuditLogViewModel> ?? new List<AuditLogViewModel>();
     ViewData["Title"] = "Settings";
 }
 
@@ -15,11 +14,6 @@
         background: rgba(255, 255, 255, 0.05);
         color: var(--accent-blue) !important;
     }
-    .filter-section {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-    }
 </style>
 
 @Html.AntiForgeryToken()
@@ -27,7 +21,7 @@
 <div class="page-header">
     <div>
         <h1>Settings</h1>
-        <p class="text-muted">Manage your saved cards and view audit logs</p>
+        <p class="text-muted">Manage your saved cards</p>
     </div>
     <div class="d-flex gap-2">
         <button onclick="location.reload()" class="btn btn-icon" title="Refresh">
@@ -39,234 +33,73 @@
     </div>
 </div>
 
-<!-- Tabs Navigation -->
-<ul class="nav nav-pills mb-4" id="settingsTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="cards-tab" data-bs-toggle="pill" data-bs-target="#cards-pane" type="button" role="tab" aria-controls="cards-pane" aria-selected="true">
-            <i class="bi bi-credit-card me-2"></i>Cards <span class="badge bg-dark ms-1">@cards.Count</span>
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="logs-tab" data-bs-toggle="pill" data-bs-target="#logs-pane" type="button" role="tab" aria-controls="logs-pane" aria-selected="false">
-            <i class="bi bi-list-check me-2"></i>Audit Logs <span class="badge bg-dark ms-1">@logs.Count</span>
-        </button>
-    </li>
-</ul>
-
-<!-- Tabs Content -->
-<div class="tab-content" id="settingsTabsContent">
-    
-    <!-- Cards Tab -->
-    <div class="tab-pane fade show active" id="cards-pane" role="tabpanel" aria-labelledby="cards-tab">
-        @if (!cards.Any())
-        {
-            <div class="empty-state">
-                <i class="bi bi-credit-card"></i>
-                <h3>No cards found</h3>
-                <p>Add a new card to get started.</p>
-            </div>
-        }
-        else
-        {
-            <div class="card-table-container">
-                <table class="table card-table" id="cardsTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('cardsTable', 0, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Card Name <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 1, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Provider <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 2, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Type <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 3, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Card Number <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 4, 'date')" style="cursor: pointer;" class="sortable-header">
-                                Expiration <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 5, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Status <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 6, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Phone <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('cardsTable', 7, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Email <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var card in cards)
-                        {
-                            <tr id="card-row-@card.Id" class="@(card.Status == CardStatus.Disabled ? "row-disabled" : "")">
-                                <td><strong>@card.CardName</strong></td>
-                                <td><span class="badge badge-@card.CardProvider.ToString().ToLower()">@card.CardProvider</span></td>
-                                <td>@card.CardType</td>
-                                <td class="font-mono">@card.MaskedCardNumber</td>
-                                <td data-sort="@card.ExpirationDate.ToString("yyyy-MM-dd")">@card.ExpirationDate.ToString("MM/yy")</td>
-                                <td>
-                                    <span class="status-badge status-@card.Status.ToString().ToLower()">
-                                        <i class="bi @(card.Status == CardStatus.Enabled ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
-                                        @card.Status
-                                    </span>
-                                </td>
-                                <td>@card.PhoneNumber</td>
-                                <td>@card.Email</td>
-                                <td class="actions">
-                                    <button class="btn-sm btn-edit" onclick="editCard(@card.Id)" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn-sm btn-delete" onclick="deleteCard(@card.Id, '@card.CardName')" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-
-    <!-- Audit Logs Tab -->
-    <div class="tab-pane fade" id="logs-pane" role="tabpanel" aria-labelledby="logs-tab">
-        
-        <!-- Filter Controls -->
-        <div class="filter-section p-3 mb-4">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label for="logSearch" class="form-label">Search Logs</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-card border-color text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" id="logSearch" onkeyup="filterLogs()" class="form-control" placeholder="Search by Card ID, errors..." />
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label for="logActionFilter" class="form-label">Filter by Action</label>
-                    <select id="logActionFilter" onchange="filterLogs()" class="form-select">
-                        <option value="">All Actions</option>
-                        @foreach (var action in Enum.GetValues<AuditActionType>())
-                        {
-                            <option value="@action">@action</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="logProviderFilter" class="form-label">Filter by Provider</label>
-                    <select id="logProviderFilter" onchange="filterLogs()" class="form-select">
-                        <option value="">All Providers</option>
-                        @foreach (var provider in Enum.GetValues<CardProvider>())
-                        {
-                            <option value="@provider">@provider</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="logSuccessFilter" class="form-label">Filter by Status</label>
-                    <select id="logSuccessFilter" onchange="filterLogs()" class="form-select">
-                        <option value="">All Statuses</option>
-                        <option value="true">Success</option>
-                        <option value="false">Failed</option>
-                    </select>
-                </div>
-            </div>
+<div class="cards-section">
+    @if (!cards.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-credit-card"></i>
+            <h3>No cards found</h3>
+            <p>Add a new card to get started.</p>
         </div>
-
-        @if (!logs.Any())
-        {
-            <div class="empty-state">
-                <i class="bi bi-list-check"></i>
-                <h3>No audit logs yet</h3>
-                <p>Audit logs will appear here as operations are performed.</p>
-            </div>
-        }
-        else
-        {
-            <div class="audit-table-container">
-                <table class="table audit-table" id="logsTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('logsTable', 0, 'date')" style="cursor: pointer;" class="sortable-header">
-                                Timestamp <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 1, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Action <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 2, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Provider <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 3, 'string')" style="cursor: pointer;" class="sortable-header">
-                                HTTP <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 4, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Status <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 5, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Card ID <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 6, 'string')" style="cursor: pointer;" class="sortable-header">
-                                Error <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
-                            <th onclick="sortTable('logsTable', 7, 'number')" style="cursor: pointer;" class="sortable-header">
-                                Duration <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
-                            </th>
+    }
+    else
+    {
+        <div class="card-table-container">
+            <table class="table card-table" id="cardsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('cardsTable', 0, 'string')" style="cursor: pointer;" class="sortable-header">
+                            Card Name <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                        </th>
+                        <th onclick="sortTable('cardsTable', 1, 'string')" style="cursor: pointer;" class="sortable-header">
+                            Provider <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                        </th>
+                        <th onclick="sortTable('cardsTable', 2, 'string')" style="cursor: pointer;" class="sortable-header">
+                            Type <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                        </th>
+                        <th>Card Number</th>
+                        <th onclick="sortTable('cardsTable', 4, 'date')" style="cursor: pointer;" class="sortable-header">
+                            Expiration <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                        </th>
+                        <th onclick="sortTable('cardsTable', 5, 'string')" style="cursor: pointer;" class="sortable-header">
+                            Status <i class="bi bi-arrow-down-up bi-sort-indicator text-muted ms-1"></i>
+                        </th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var card in cards)
+                    {
+                        <tr id="card-row-@card.Id" class="@(card.Status == CardStatus.Disabled ? "row-disabled" : "")">
+                            <td><strong>@card.CardName</strong></td>
+                            <td><span class="badge badge-@card.CardProvider.ToString().ToLower()">@card.CardProvider</span></td>
+                            <td>@card.CardType</td>
+                            <td class="font-mono">@card.MaskedCardNumber</td>
+                            <td data-sort="@card.ExpirationDate.ToString("yyyy-MM-dd")">@card.ExpirationDate.ToString("MM/yy")</td>
+                            <td>
+                                <span class="status-badge status-@card.Status.ToString().ToLower()">
+                                    <i class="bi @(card.Status == CardStatus.Enabled ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                    @card.Status
+                                </span>
+                            </td>
+                            <td>@card.PhoneNumber</td>
+                            <td>@card.Email</td>
+                            <td class="actions">
+                                <button class="btn-sm btn-edit" onclick="editCard(@card.Id)" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn-sm btn-delete" onclick="deleteCard(@card.Id, '@card.CardName')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var log in logs)
-                        {
-                            <tr class="audit-row audit-@(log.Success ? "success" : "fail")" 
-                                data-action="@log.ActionType" 
-                                data-provider="@(log.Provider ?? "")" 
-                                data-success="@log.Success.ToString().ToLower()">
-                                <td class="font-mono" data-sort="@log.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss")">
-                                    @log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
-                                </td>
-                                <td><span class="badge badge-action">@log.ActionType</span></td>
-                                <td>@(log.Provider ?? "—")</td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(log.HttpMethod))
-                                    {
-                                        <span>@log.HttpMethod @(log.HttpStatusCode?.ToString() ?? "")</span>
-                                    }
-                                    else
-                                    {
-                                        <span>—</span>
-                                    }
-                                </td>
-                                <td data-sort="@log.Success.ToString().ToLower()">
-                                    @if (log.Success)
-                                    {
-                                        <span class="text-success"><i class="bi bi-check-circle-fill"></i> Success</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Failed</span>
-                                    }
-                                </td>
-                                <td class="font-mono">@log.CardIdMasked</td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(log.ErrorMessage))
-                                    {
-                                        <span class="text-danger" title="@log.ErrorMessage">@log.ErrorCode</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">—</span>
-                                    }
-                                </td>
-                                <td data-sort="@log.DurationMs">@log.DurationMs ms</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 <!-- Card Form Modal -->
@@ -294,6 +127,8 @@
             .then(html => {
                 document.getElementById('cardFormTitle').textContent = 'Add New Card';
                 document.getElementById('cardFormBody').innerHTML = html;
+                // Re-parse validation for dynamically loaded content
+                $.validator.unobtrusive.parse('#cardFormBody');
                 new bootstrap.Modal(document.getElementById('cardFormModal')).show();
             });
     }
@@ -304,6 +139,8 @@
             .then(html => {
                 document.getElementById('cardFormTitle').textContent = 'Edit Card';
                 document.getElementById('cardFormBody').innerHTML = html;
+                // Re-parse validation for dynamically loaded content
+                $.validator.unobtrusive.parse('#cardFormBody');
                 new bootstrap.Modal(document.getElementById('cardFormModal')).show();
             });
     }
@@ -331,7 +168,6 @@
         const rows = Array.from(tbody.querySelectorAll('tr'));
         if (rows.length === 0) return;
         
-        // Determine sort direction
         let isAsc = true;
         const header = table.querySelectorAll('thead th')[colIndex];
         if (header.classList.contains('sort-asc')) {
@@ -370,54 +206,7 @@
         rows.forEach(row => tbody.appendChild(row));
     }
 
-    // Client-side real-time audit log filtering
-    function filterLogs() {
-        const searchText = document.getElementById('logSearch').value.toLowerCase();
-        const actionFilter = document.getElementById('logActionFilter').value;
-        const providerFilter = document.getElementById('logProviderFilter').value;
-        const successFilter = document.getElementById('logSuccessFilter').value;
-
-        const rows = document.querySelectorAll('#logsTable tbody tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const action = row.getAttribute('data-action') || '';
-            const provider = row.getAttribute('data-provider') || '';
-            const success = row.getAttribute('data-success') || '';
-
-            const matchesSearch = !searchText || text.includes(searchText);
-            const matchesAction = !actionFilter || action === actionFilter;
-            const matchesProvider = !providerFilter || provider === providerFilter;
-            const matchesSuccess = !successFilter || success === successFilter;
-
-            if (matchesSearch && matchesAction && matchesProvider && matchesSuccess) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        // Toggle message if no logs are shown
-        const container = document.querySelector('.audit-table-container');
-        let noLogsMsg = document.getElementById('noLogsFilteredMessage');
-        if (visibleCount === 0 && rows.length > 0) {
-            if (!noLogsMsg) {
-                noLogsMsg = document.createElement('div');
-                noLogsMsg.id = 'noLogsFilteredMessage';
-                noLogsMsg.className = 'text-center py-4 text-muted';
-                noLogsMsg.innerHTML = '<i class="bi bi-search d-block fs-3 mb-2"></i> No matching logs found';
-                container.appendChild(noLogsMsg);
-            } else {
-                noLogsMsg.style.display = 'block';
-            }
-        } else if (noLogsMsg) {
-            noLogsMsg.style.display = 'none';
-        }
-    }
-
-    // Intercept form submit inside the modal, send via AJAX, close modal, reload page on success
+    // Intercept form submit inside the modal — send via AJAX
     document.addEventListener('submit', function (e) {
         if (e.target && e.target.id === 'cardForm') {
             e.preventDefault();
@@ -446,9 +235,11 @@
                         }
                     });
                 } else {
-                    // Refresh modal body with validation error partial view
+                    // Server returned the partial with validation errors
                     return response.text().then(html => {
                         document.getElementById('cardFormBody').innerHTML = html;
+                        // Re-parse validation for the new HTML
+                        $.validator.unobtrusive.parse('#cardFormBody');
                     });
                 }
             })

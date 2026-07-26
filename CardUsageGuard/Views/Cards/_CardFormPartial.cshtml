@@ -4,68 +4,71 @@
 }
 <form id="cardForm" asp-action="@(Model.Id > 0 ? "Edit" : "Create")" asp-route-id="@(Model.Id > 0 ? Model.Id : null)" method="post">
     @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" style="display:none;"></div>
     <div class="row">
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="CardName">Card Name</label>
+            <div class="form-group mb-3">
+                <label asp-for="CardName" class="form-label">Card Name</label>
                 <input asp-for="CardName" class="form-control" placeholder="e.g. Daily Spending" />
-                <span asp-validation-for="CardName" class="text-danger"></span>
+                <span asp-validation-for="CardName" class="text-danger small"></span>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="CardProvider">Provider</label>
+            <div class="form-group mb-3">
+                <label asp-for="CardProvider" class="form-label">Provider</label>
                 <select asp-for="CardProvider" asp-items="Html.GetEnumSelectList<CardProvider>()" class="form-control"></select>
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="CardType">Type</label>
+            <div class="form-group mb-3">
+                <label asp-for="CardType" class="form-label">Type</label>
                 <select asp-for="CardType" asp-items="Html.GetEnumSelectList<CardType>()" class="form-control"></select>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="ExpirationDate">Expiration Date</label>
-                <input asp-for="ExpirationDate" type="date" class="form-control" />
-                <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+            <div class="form-group mb-3">
+                <label asp-for="ExpirationDate" class="form-label">Expiration Date</label>
+                <input asp-for="ExpirationDate" type="date" class="form-control" value="@(Model.ExpirationDate != DateTime.MinValue ? Model.ExpirationDate.ToString("yyyy-MM-dd") : "")" />
+                <span asp-validation-for="ExpirationDate" class="text-danger small"></span>
             </div>
         </div>
     </div>
-    <div class="form-group">
-        <label asp-for="CardNumber">Card Number @(Model.Id > 0 ? "(Last 4 — already stored)" : "")</label>
+    <div class="form-group mb-3">
+        <label asp-for="CardNumber" class="form-label">Card Number @(Model.Id > 0 ? "(Last 4 — already stored)" : "")</label>
         @if (Model.Id > 0)
         {
-            <input asp-for="CardNumber" class="form-control" readonly value="@Model.CardNumber" />
+            @* Hidden field ensures CardNumber is submitted with the form (readonly inputs are NOT submitted) *@
+            <input type="hidden" asp-for="CardNumber" />
+            <input class="form-control font-mono" value="**** **** **** @Model.CardNumber" readonly disabled />
             <small class="text-muted">Card number is stored as last 4 only and cannot be edited.</small>
         }
         else
         {
             <input asp-for="CardNumber" class="form-control font-mono" placeholder="0000 0000 0000 0000" />
-            <span asp-validation-for="CardNumber" class="text-danger"></span>
+            <span asp-validation-for="CardNumber" class="text-danger small"></span>
             <small class="text-muted">Only the last 4 digits will be stored.</small>
         }
     </div>
     <div class="row">
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="PhoneNumber">Phone Number</label>
+            <div class="form-group mb-3">
+                <label asp-for="PhoneNumber" class="form-label">Phone Number</label>
                 <input asp-for="PhoneNumber" class="form-control" placeholder="+1 555 000 0000" />
-                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="form-group">
-                <label asp-for="Email">Email</label>
+            <div class="form-group mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
                 <input asp-for="Email" class="form-control" placeholder="user@email.com" />
-                <span asp-validation-for="Email" class="text-danger"></span>
+                <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
         </div>
     </div>
-    <div class="form-group">
-        <label asp-for="Status">Status</label>
+    <div class="form-group mb-3">
+        <label asp-for="Status" class="form-label">Status</label>
         <select asp-for="Status" asp-items="Html.GetEnumSelectList<CardStatus>()" class="form-control"></select>
     </div>
     <button type="submit" class="btn btn-primary w-100 mt-3">@(Model.Id > 0 ? "Update Card" : "Add Card")</button>
