@@ -1,0 +1,62 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<CardUsageGuard.Models.ApplicationUser> UserManager
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var userName = currentUser?.FullName ?? currentUser?.Email ?? "User";
+    var isAdmin = User.IsInRole("admin");
+}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CardUsageGuard</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/dark-theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
+</head>
+<body class="dark-theme">
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="bi bi-shield-lock-fill text-primary"></i>
+                <span class="sidebar-title">CardUsageGuard</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a asp-controller="Cards" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Cards" ? "active" : "")">
+                    <i class="bi bi-credit-card"></i> Manage Cards
+                </a>
+                <a asp-controller="AuditLog" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AuditLog" ? "active" : "")">
+                    <i class="bi bi-list-check"></i> Audit Log
+                </a>
+                <a asp-controller="Home" asp-action="Settings" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active" : "")">
+                    <i class="bi bi-gear"></i> Settings
+                </a>
+                @if (isAdmin)
+                {
+                    <div class="admin-badge"><i class="bi bi-star-fill"></i> Admin</div>
+                }
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="bi bi-person-circle"></i>
+                    <span>@userName</span>
+                </div>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form">
+                    <button type="submit" class="btn-logout"><i class="bi bi-box-arrow-right"></i></button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

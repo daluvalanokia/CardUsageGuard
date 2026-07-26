@@ -1,0 +1,65 @@
+@model CardViewModel
+<form id="cardForm" asp-action="@(Model.Id > 0 ? "Edit" : "Create")" asp-route-id="@(Model.Id > 0 ? Model.Id : null)" method="post">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="CardName">Card Name</label>
+                <input asp-for="CardName" class="form-control" />
+                <span asp-validation-for="CardName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="CardProvider">Provider</label>
+                <select asp-for="CardProvider" asp-items="Html.GetEnumSelectList<CardProvider>()" class="form-control"></select>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="CardType">Type</label>
+                <select asp-for="CardType" asp-items="Html.GetEnumSelectList<CardType>()" class="form-control"></select>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="CardNumber">Card Number @(Model.Id > 0 ? "(Last 4)" : "")</label>
+                <input asp-for="CardNumber" class="form-control" placeholder="1234 5678 9012 3456" />
+                <span asp-validation-for="CardNumber" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="ExpirationDate">Expiration Date</label>
+                <input asp-for="ExpirationDate" type="date" class="form-control" />
+                <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="Status">Status</label>
+                <select asp-for="Status" asp-items="Html.GetEnumSelectList<CardStatus>()" class="form-control"></select>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="PhoneNumber">Phone Number</label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="Email">Email</label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 mt-3">@(Model.Id > 0 ? "Update Card" : "Add Card")</button>
+</form>

@@ -1,0 +1,166 @@
+@model List<CardViewModel>
+@{
+    ViewData["Title"] = "Secured Card Manage";
+    var sortKey = ViewBag.SortKey as string ?? "CardName";
+    var sortDir = ViewBag.SortDir as string ?? "asc";
+    string ToggleDir(string key) => key == sortKey && sortDir == "asc" ? "desc" : "asc";
+    string SortIcon(string key) => key == sortKey ? (sortDir == "asc" ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Secured Card Manage</h1>
+        <p class="text-muted">Select a card and authorize to block or unblock usage via provider API</p>
+    </div>
+    <button onclick="location.reload()" class="btn btn-icon" title="Refresh">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <i class="bi bi-credit-card"></i>
+        <h3>No cards found</h3>
+        <p>Add a new card to get started.</p>
+    </div>
+}
+else
+{
+    <!-- Card Table -->
+    <div class="card-table-container">
+        <table class="table card-table">
+            <thead>
+                <tr>
+                    <th>
+                        <a asp-action="Index" asp-route-sortKey="CardName" asp-route-sortDir="@ToggleDir("CardName")" class="sort-link">
+                            Card Name <i class="bi @SortIcon("CardName")"></i>
+                        </a>
+                    </th>
+                    <th>Provider</th>
+                    <th>
+                        <a asp-action="Index" asp-route-sortKey="CardType" asp-route-sortDir="@ToggleDir("CardType")" class="sort-link">
+                            Type <i class="bi @SortIcon("CardType")"></i>
+                        </a>
+                    </th>
+                    <th>Number</th>
+                    <th>
+                        <a asp-action="Index" asp-route-sortKey="ExpirationDate" asp-route-sortDir="@ToggleDir("ExpirationDate")" class="sort-link">
+                            Expires <i class="bi @SortIcon("ExpirationDate")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-action="Index" asp-route-sortKey="Status" asp-route-sortDir="@ToggleDir("Status")" class="sort-link">
+                            Status <i class="bi @SortIcon("Status")"></i>
+                        </a>
+                    </th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var card in Model)
+                {
+                    <tr id="card-row-@card.Id" class="@(card.Status == CardStatus.Disabled ? "row-disabled" : "")">
+                        <td><strong>@card.CardName</strong></td>
+                        <td><span class="badge badge-@card.CardProvider.ToString().ToLower()">@card.CardProvider</span></td>
+                        <td>@card.CardType</td>
+                        <td class="font-mono">@card.MaskedCardNumber</td>
+                        <td>@card.ExpirationDate.ToString("MM/yy")</td>
+                        <td>
+                            <span class="status-badge status-@card.Status.ToString().ToLower()">
+                                <i class="bi @(card.Status == CardStatus.Enabled ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                @card.Status
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <button class="btn-sm btn-status" onclick="openStatusPanel(@card.Id, '@card.CardName', '@card.Status')" title="Manage Status">
+                                <i class="bi bi-shield-lock"></i>
+                            </button>
+                            <button class="btn-sm btn-edit" onclick="editCard(@card.Id)" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn-sm btn-delete" onclick="deleteCard(@card.Id, '@card.CardName')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <button class="btn btn-primary mt-3" onclick="addCard()">
+        <i class="bi bi-plus-circle"></i> Add New Card
+    </button>
+}
+
+<!-- Status Panel Modal -->
+<div class="modal fade" id="statusPanelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-shield-lock"></i> Card Status Authorization</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="statusPanelBody">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Card Form Modal -->
+<div class="modal fade" id="cardFormModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cardFormTitle">Add New Card</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cardFormBody">
+                <!-- Filled by partial view -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+    function addCard() {
+        fetch('@Url.Action("Create")', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('cardFormTitle').textContent = 'Add New Card';
+                document.getElementById('cardFormBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('cardFormModal')).show();
+            });
+    }
+
+    function editCard(id) {
+        fetch('@Url.Action("Edit")/' + id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('cardFormTitle').textContent = 'Edit Card';
+                document.getElementById('cardFormBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('cardFormModal')).show();
+            });
+    }
+
+    function deleteCard(id, name) {
+        if (!confirm('Delete card "' + name + '"? This cannot be undone.')) return;
+        const form = new FormData();
+        form.append('__RequestVerificationToken', antiForgeryToken || getAntiForgeryToken());
+        fetch('@Url.Action("Delete")/' + id, { method: 'POST', body: form })
+            .then(r => r.json())
+            .then(data => { if (data.success) location.reload(); else alert(data.error || 'Delete failed'); });
+    }
+
+    function getAntiForgeryToken() {
+        const token = document.querySelector('[name=__RequestVerificationToken]');
+        return token ? token.value : '';
+    }
+
+    function openStatusPanel(cardId, cardName, currentStatus) {
+        document.getElementById('statusPanelBody').innerHTML = 

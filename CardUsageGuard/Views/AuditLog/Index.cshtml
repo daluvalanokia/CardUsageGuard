@@ -1,0 +1,60 @@
+@model List<AuditLogViewModel>
+@{ ViewData["Title"] = "Audit Log"; }
+
+<div class="page-header">
+    <h1>Audit Log</h1>
+    <p class="text-muted">Full audit trail of all sensitive operations</p>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <i class="bi bi-list-check"></i>
+        <h3>No audit entries yet</h3>
+        <p>Audit logs will appear here as you perform card operations.</p>
+    </div>
+}
+else
+{
+    <div class="audit-table-container">
+        <table class="table audit-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Card ID</th>
+                    <th>Provider</th>
+                    <th>HTTP</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr class="audit-row audit-@(log.Success ? "success" : "fail")">
+                        <td class="font-mono">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td><span class="badge badge-action">@log.ActionType</span></td>
+                        <td class="font-mono">@log.CardIdMasked</td>
+                        <td>@(log.Provider ?? "—")</td>
+                        <td>@(log.HttpMethod ?? "—") @(log.HttpStatusCode?.ToString() ?? "")</td>
+                        <td>
+                            @if (log.Success)
+                            { <span class="text-success"><i class="bi bi-check-circle-fill"></i> Success</span> }
+                            else
+                            { <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Failed</span> }
+                        </td>
+                        <td>@log.DurationMs ms</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(log.ErrorMessage))
+                            { <span class="text-danger" title="@log.ErrorMessage">@log.ErrorCode</span> }
+                            else
+                            { <span class="text-muted">—</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
