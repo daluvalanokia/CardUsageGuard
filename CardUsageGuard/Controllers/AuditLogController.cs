@@ -1,6 +1,7 @@
 using CardUsageGuard.Data;
 using CardUsageGuard.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,7 @@ public class AuditLogController : Controller
     private readonly AppDbContext _db;
     private readonly UserManager<Models.ApplicationUser> _userManager;
 
-    public AuditLogController(AppDbContext db, Microsoft.AspNetCore.Identity.UserManager<Models.ApplicationUser> userManager)
+    public AuditLogController(AppDbContext db, UserManager<Models.ApplicationUser> userManager)
     {
         _db = db;
         _userManager = userManager;
