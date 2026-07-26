@@ -1,4 +1,5 @@
 using CardUsageGuard.Data;
+using CardUsageGuard.Middleware;
 using CardUsageGuard.Models;
 using CardUsageGuard.Services;
 using Microsoft.AspNetCore.Identity;
