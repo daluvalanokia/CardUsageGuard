@@ -12,6 +12,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Card> Cards { get; set; } = null!;
     public DbSet<OtpCode> OtpCodes { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+    public DbSet<AppSetting> AppSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -70,6 +71,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.ActionType);
             entity.HasIndex(e => e.CardId);
+        });
+
+        // AppSetting
+        builder.Entity<AppSetting>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Value).HasMaxLength(2000);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => e.Key).IsUnique();
+            entity.HasIndex(e => e.Category);
         });
     }
 }

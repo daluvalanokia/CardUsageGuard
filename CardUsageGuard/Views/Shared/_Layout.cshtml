@@ -38,6 +38,9 @@
                     <a asp-controller="Database" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Database" ? "active" : "")">
                         <i class="bi bi-database"></i> Database
                     </a>
+                    <a asp-controller="Configuration" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Configuration" ? "active" : "")">
+                        <i class="bi bi-sliders"></i> Configuration
+                    </a>
                     <div class="admin-badge"><i class="bi bi-star-fill"></i> Admin</div>
                 }
             </nav>

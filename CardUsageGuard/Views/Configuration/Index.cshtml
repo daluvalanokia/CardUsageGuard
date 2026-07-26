@@ -1,0 +1,407 @@
+@using CardUsageGuard.Models.Entities
+@{
+    ViewData["Title"] = "Configuration";
+    var settings = ViewBag.Settings as List<AppSetting> ?? new List<AppSetting>();
+    var lithicMode = ViewBag.LithicMode as string ?? "Simulated";
+    var googleConfigured = ViewBag.GoogleConfigured as bool? ?? false;
+
+    var categories = settings.Select(s => s.Category).Distinct().ToList();
+}
+
+<style>
+    .config-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+    .mode-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .mode-simulated {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-orange, #f59e0b);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .mode-production {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .config-category {
+        background: var(--bg-secondary, #1e293b);
+        border: 1px solid var(--border-color, #334155);
+        border-radius: var(--radius, 12px);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .config-category-header {
+        padding: 14px 20px;
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--text-primary, #f1f5f9);
+        border-bottom: 1px solid var(--border-color, #334155);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .config-row {
+        display: grid;
+        grid-template-columns: 1fr 2fr auto;
+        gap: 16px;
+        padding: 14px 20px;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color, #334155);
+    }
+    .config-row:last-child {
+        border-bottom: none;
+    }
+    .config-row:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .config-label {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .config-label .key {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--text-primary, #f1f5f9);
+        font-family: monospace;
+    }
+    .config-label .desc {
+        font-size: 12px;
+        color: var(--text-muted, #94a3b8);
+    }
+    .config-input {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border-color, #334155);
+        color: var(--text-primary, #f1f5f9);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: monospace;
+        width: 100%;
+        transition: border-color 0.2s;
+    }
+    .config-input:focus {
+        outline: none;
+        border-color: var(--accent-blue, #3b82f6);
+    }
+    .config-input.secret {
+        -webkit-text-security: disc;
+        text-security: disc;
+    }
+    .config-input.secret.revealed {
+        -webkit-text-security: none;
+        text-security: none;
+    }
+    .config-actions {
+        display: flex;
+        gap: 4px;
+    }
+    .btn-icon-sm {
+        padding: 6px 10px;
+        border: 1px solid var(--border-color, #334155);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-muted, #94a3b8);
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 13px;
+    }
+    .btn-icon-sm:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary, #f1f5f9);
+    }
+    .btn-icon-sm.save-btn:hover {
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.4);
+    }
+    .btn-icon-sm.reveal-btn:hover {
+        color: var(--accent-blue, #3b82f6);
+        border-color: rgba(59, 130, 246, 0.4);
+    }
+    .config-status {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-configured {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+    }
+    .status-placeholder {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-orange, #f59e0b);
+    }
+    .status-empty {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+    }
+    .test-connection-btn {
+        padding: 10px 20px;
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--accent-blue, #3b82f6);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .test-connection-btn:hover {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: var(--accent-blue, #3b82f6);
+    }
+    .test-result {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        display: none;
+    }
+    .test-result.success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #4ade80;
+    }
+    .test-result.error {
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.3);
+        color: #f87171;
+    }
+    .save-toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #4ade80;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        gap: 8px;
+    }
+    .lithic-info-box {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: var(--radius, 12px);
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        color: var(--text-muted, #94a3b8);
+    }
+    .lithic-info-box strong { color: var(--text-primary, #f1f5f9); }
+    .lithic-info-box code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--accent-blue, #3b82f6);
+    }
+</style>
+
+<div class="config-header">
+    <div>
+        <h1>Configuration</h1>
+        <p class="text-muted">Manage provider API, OTP, and authentication settings</p>
+    </div>
+    <span class="mode-badge @(lithicMode == "Production" ? "mode-production" : "mode-simulated")">
+        <i class="bi @(lithicMode == "Production" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill")"></i>
+        Lithic: @lithicMode
+    </span>
+</div>
+
+<!-- Lithic Info Box -->
+<div class="lithic-info-box">
+    <strong>Lithic Card Status Mapping:</strong>
+    <code>Enabled</code> → <code>OPEN</code> (approves authorizations) &nbsp;|&nbsp;
+    <code>Disabled</code> → <code>PAUSED</code> (declines authorizations, resumable)
+    <br />
+    API: <code>PATCH /v1/cards/{token}</code> with <code>{ "state": "OPEN" }</code> or <code>{ "state": "PAUSED" }</code>
+    <br />
+    Auth: <code>x-api-key</code> header &nbsp;|&nbsp;
+    Sandbox: <code>https://sandbox.lithic.com/v1</code> &nbsp;|&nbsp;
+    Production: <code>https://api.lithic.com/v1</code>
+</div>
+
+<!-- Test Connection -->
+<div style="margin-bottom: 20px;">
+    <button class="test-connection-btn" onclick="testLithicConnection()">
+        <i class="bi bi-wifi"></i> Test Lithic Connection
+    </button>
+    <div id="testResult" class="test-result"></div>
+</div>
+
+<!-- Configuration Categories -->
+@foreach (var category in categories)
+{
+    var categorySettings = settings.Where(s => s.Category == category).ToList();
+    var icon = category switch
+    {
+        "Lithic Provider API" => "bi-cloud-arrow-down",
+        "OTP Settings" => "bi-shield-lock",
+        "Google OAuth" => "bi-google",
+        "Database" => "bi-database",
+        _ => "bi-gear"
+    };
+
+    <div class="config-category">
+        <div class="config-category-header">
+            <i class="bi @icon"></i> @category
+        </div>
+        @foreach (var setting in categorySettings)
+        {
+            var isPlaceholder = setting.Value == "PLACEHOLDER_CLIENT_ID" || setting.Value == "PLACEHOLDER_CLIENT_SECRET";
+            var isEmpty = string.IsNullOrEmpty(setting.Value);
+            var statusClass = isEmpty ? "status-empty" : (isPlaceholder ? "status-placeholder" : "status-configured");
+            var statusText = isEmpty ? "Not Set" : (isPlaceholder ? "Placeholder" : "Configured");
+
+            <div class="config-row" data-id="@setting.Id">
+                <div class="config-label">
+                    <span class="key">@setting.Key</span>
+                    <span class="desc">@setting.Description</span>
+                </div>
+                <input type="text"
+                       class="config-input @(setting.IsSecret ? "secret" : "")"
+                       id="setting-@setting.Id"
+                       value="@setting.Value"
+                       placeholder="@(isEmpty ? "Not configured" : "")" />
+                <div class="config-actions">
+                    @if (setting.IsSecret)
+                    {
+                        <button class="btn-icon-sm reveal-btn" onclick="toggleReveal(@setting.Id)" title="Show/Hide">
+                            <i class="bi bi-eye" id="eye-@setting.Id"></i>
+                        </button>
+                    }
+                    <button class="btn-icon-sm save-btn" onclick="saveSetting(@setting.Id)" title="Save">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Save Toast -->
+<div class="save-toast" id="saveToast">
+    <i class="bi bi-check-circle-fill"></i> <span id="toastMessage">Setting saved</span>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<script>
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+    function toggleReveal(id) {
+        const input = document.getElementById('setting-' + id);
+        const eye = document.getElementById('eye-' + id);
+        if (input.classList.contains('revealed')) {
+            input.classList.remove('revealed');
+            eye.className = 'bi bi-eye';
+        } else {
+            input.classList.add('revealed');
+            eye.className = 'bi bi-eye-slash';
+        }
+    }
+
+    function saveSetting(id) {
+        const input = document.getElementById('setting-' + id);
+        const value = input.value;
+
+        fetch('@Url.Action("Update", "Configuration")/' + id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: 'value=' + encodeURIComponent(value)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Setting saved successfully');
+            } else {
+                showToast('Failed to save setting', true);
+            }
+        })
+        .catch(() => showToast('Error saving setting', true));
+    }
+
+    function showToast(message, isError) {
+        const toast = document.getElementById('saveToast');
+        const msg = document.getElementById('toastMessage');
+        msg.textContent = message;
+        if (isError) {
+            toast.style.background = 'rgba(248, 113, 113, 0.15)';
+            toast.style.borderColor = 'rgba(248, 113, 113, 0.3)';
+            toast.style.color = '#f87171';
+        } else {
+            toast.style.background = 'rgba(34, 197, 94, 0.15)';
+            toast.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+            toast.style.color = '#4ade80';
+        }
+        toast.style.display = 'flex';
+        clearTimeout(toast.timeout);
+        toast.timeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    function testLithicConnection() {
+        const btn = document.querySelector('.test-connection-btn');
+        const result = document.getElementById('testResult');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Testing...';
+        result.style.display = 'none';
+
+        fetch('@Url.Action("TestLithicConnection", "Configuration")', {
+            headers: { 'RequestVerificationToken': antiForgeryToken }
+        })
+        .then(r => r.json())
+        .then(data => {
+            result.style.display = 'block';
+            result.className = 'test-result ' + (data.success ? 'success' : 'error');
+            result.innerHTML = '<i class="bi ' + (data.success ? 'bi-check-circle-fill' : 'bi-x-circle-fill') + '"></i> ' +
+                '<strong>' + data.mode + ' Mode</strong> — ' + data.message +
+                (data.statusCode ? ' (HTTP ' + data.statusCode + ')' : '');
+        })
+        .catch(err => {
+            result.style.display = 'block';
+            result.className = 'test-result error';
+            result.innerHTML = '<i class="bi bi-x-circle-fill"></i> Connection error: ' + err.message;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-wifi"></i> Test Lithic Connection';
+        });
+    }
+
+    // Save on Enter key
+    document.querySelectorAll('.config-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const id = this.id.replace('setting-', '');
+                saveSetting(id);
+            }
+        });
+    });
+</script>
+}

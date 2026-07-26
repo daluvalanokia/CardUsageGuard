@@ -298,6 +298,21 @@ public static class SeedData
 
             db.AuditLogs.AddRange(logs);
             await db.SaveChangesAsync();
+        // --- Seed app settings (auto-seeded on first Configuration page visit) ---
+        if (!await db.AppSettings.AnyAsync())
+        {
+            db.AppSettings.AddRange(
+                new AppSetting { Category = "Lithic Provider API", Key = "Lithic.BaseUrl", Value = "https://sandbox.lithic.com/v1", Description = "Lithic API base URL. Sandbox for testing, api.lithic.com for production.", IsSecret = false },
+                new AppSetting { Category = "Lithic Provider API", Key = "Lithic.ApiKey", Value = "", Description = "Lithic API key for authentication. Get yours at lithic.com/dashboard. Leave empty for simulated mode.", IsSecret = true },
+                new AppSetting { Category = "Lithic Provider API", Key = "Lithic.CardState.Enabled", Value = "OPEN", Description = "Lithic state value when card is enabled.", IsSecret = false },
+                new AppSetting { Category = "Lithic Provider API", Key = "Lithic.CardState.Disabled", Value = "PAUSED", Description = "Lithic state value when card is disabled.", IsSecret = false },
+                new AppSetting { Category = "OTP Settings", Key = "Otp.CodeLength", Value = "6", Description = "Number of digits in the OTP code.", IsSecret = false },
+                new AppSetting { Category = "OTP Settings", Key = "Otp.ExpiryMinutes", Value = "5", Description = "Minutes before an OTP code expires.", IsSecret = false },
+                new AppSetting { Category = "Google OAuth", Key = "Google.ClientId", Value = "PLACEHOLDER_CLIENT_ID", Description = "Google OAuth 2.0 Client ID.", IsSecret = false },
+                new AppSetting { Category = "Google OAuth", Key = "Google.ClientSecret", Value = "PLACEHOLDER_CLIENT_SECRET", Description = "Google OAuth 2.0 Client Secret.", IsSecret = true }
+            );
+            await db.SaveChangesAsync();
+        }
         }
     }
 }
