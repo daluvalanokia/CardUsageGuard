@@ -21,8 +21,12 @@ public class CardStatusService
 
     /// <summary>
     /// Updates a card's status after OTP verification.
-    /// Flow: Verify OTP -> Call Provider API -> Update DB status -> Log audit.
+    /// Flow: Verify OTP → Call Lithic API → Update DB status → Log audit.
     /// All steps are audited. No bypass of OTP or audit logging.
+    /// 
+    /// Lithic state mapping:
+    ///   CardStatus.Enabled  → "OPEN"   (card approves authorizations)
+    ///   CardStatus.Disabled → "PAUSED"  (card declines authorizations, resumable)
     /// </summary>
     public async Task<(bool success, string? error, object? response)> UpdateStatusAsync(
         int cardId, CardStatus newStatus, string otpCode, string userId)
@@ -54,8 +58,14 @@ public class CardStatusService
                 CardId = cardId,
                 CardIdMasked = CardMaskingUtility.MaskCardId(cardId),
                 Provider = card.CardProvider.ToString(),
-                HttpMethod = "POST",
-                RequestPayload = CardMaskingUtility.SanitizePayload(new { cardId, newStatus, otpVerified = false }),
+                HttpMethod = "PATCH",
+                RequestPayload = CardMaskingUtility.SanitizePayload(new
+                {
+                    cardId,
+                    requestedStatus = newStatus.ToString(),
+                    lithicState = newStatus == CardStatus.Enabled ? "OPEN" : "PAUSED",
+                    otpVerified = false
+                }),
                 ResponsePayload = """{"success":false,"reason":"OTP verification failed"}""",
                 Success = false,
                 ErrorCode = "OTP_INVALID",
@@ -67,26 +77,27 @@ public class CardStatusService
             return (false, "OTP verification failed. Please request a new code.", null);
         }
 
-        // Step 2: Call provider API — returns full request + response for audit
+        // Step 2: Call Lithic API — PATCH /v1/cards/{card_token}
+        // Maps: Enabled → "OPEN", Disabled → "PAUSED"
         var (apiSuccess, httpStatusCode, requestPayload, responsePayload, httpUrl, apiError) =
             await _providerApi.CallProviderAsync(card.CardProvider, card.CardNumber, newStatus);
 
         sw.Stop();
 
-        // Log the provider API call with FULL request and response
+        // Log the Lithic API call with FULL request and response
         await _auditLog.LogAsync(new AuditLog
         {
             ActionType = AuditActionType.PROVIDER_API_CALL,
             CardId = cardId,
             CardIdMasked = CardMaskingUtility.MaskCardId(cardId),
             Provider = card.CardProvider.ToString(),
-            HttpMethod = "POST",
+            HttpMethod = "PATCH",
             HttpUrl = httpUrl,
             HttpStatusCode = httpStatusCode,
             RequestPayload = requestPayload,
             ResponsePayload = responsePayload,
             Success = apiSuccess,
-            ErrorCode = apiSuccess ? null : "PROVIDER_API_ERROR",
+            ErrorCode = apiSuccess ? null : "LITHIC_API_ERROR",
             ErrorMessage = apiError,
             DurationMs = (int)sw.ElapsedMilliseconds,
             LogLevel = apiSuccess ? LogLevelType.Information : LogLevelType.Error,
@@ -95,7 +106,7 @@ public class CardStatusService
 
         if (!apiSuccess)
         {
-            return (false, $"Provider API call failed: {apiError}", null);
+            return (false, $"Lithic API call failed: {apiError}", null);
         }
 
         // Step 3: Update card status in DB
@@ -111,7 +122,7 @@ public class CardStatusService
             CardId = cardId,
             CardIdMasked = CardMaskingUtility.MaskCardId(cardId),
             Provider = card.CardProvider.ToString(),
-            HttpMethod = "POST",
+            HttpMethod = "PATCH",
             HttpUrl = httpUrl,
             HttpStatusCode = httpStatusCode,
             RequestPayload = CardMaskingUtility.SanitizePayload(new
@@ -119,6 +130,7 @@ public class CardStatusService
                 cardId,
                 oldStatus = oldStatus.ToString(),
                 newStatus = newStatus.ToString(),
+                lithicState = newStatus == CardStatus.Enabled ? "OPEN" : "PAUSED",
                 providerApiRequest = "see PROVIDER_API_CALL entry above"
             }),
             ResponsePayload = responsePayload,
@@ -135,6 +147,7 @@ public class CardStatusService
             provider = card.CardProvider.ToString(),
             oldStatus = oldStatus.ToString(),
             newStatus = newStatus.ToString(),
+            lithicState = newStatus == CardStatus.Enabled ? "OPEN" : "PAUSED",
             providerResponse = responsePayload
         });
     }
